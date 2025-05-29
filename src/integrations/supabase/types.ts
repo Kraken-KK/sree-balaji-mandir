@@ -150,6 +150,7 @@ export type Database = {
           created_at: string | null
           data_collection: boolean | null
           notifications_enabled: boolean | null
+          profile_id: string | null
           theme: string | null
           updated_at: string | null
           user_id: string
@@ -161,6 +162,7 @@ export type Database = {
           created_at?: string | null
           data_collection?: boolean | null
           notifications_enabled?: boolean | null
+          profile_id?: string | null
           theme?: string | null
           updated_at?: string | null
           user_id: string
@@ -172,10 +174,61 @@ export type Database = {
           created_at?: string | null
           data_collection?: boolean | null
           notifications_enabled?: boolean | null
+          profile_id?: string | null
           theme?: string | null
           updated_at?: string | null
           user_id?: string
           voice_interaction?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          full_name: string | null
+          id: string
+          location: string | null
+          phone: string | null
+          updated_at: string | null
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          full_name?: string | null
+          id?: string
+          location?: string | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          full_name?: string | null
+          id?: string
+          location?: string | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string
+          username?: string | null
         }
         Relationships: []
       }
