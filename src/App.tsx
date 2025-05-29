@@ -12,6 +12,7 @@ import Events from "./pages/Events";
 import Services from "./pages/Services";
 import Donations from "./pages/Donations";
 import SignUp from "./pages/SignUp";
+import History from "./pages/History";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -32,6 +33,7 @@ const App = () => (
               <Route path="/services" element={<Services />} />
               <Route path="/donations" element={<Donations />} />
               <Route path="/signup" element={<SignUp />} />
+              <Route path="/history" element={<History />} />
               <Route path="/admin-dashboard" element={<AdminDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

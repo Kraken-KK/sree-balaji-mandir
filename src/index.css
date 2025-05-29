@@ -84,4 +84,120 @@
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
+
+  /* Enhanced Animations */
+  @keyframes slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes ken-burns {
+    0% {
+      transform: scale(1) translateX(0) translateY(0);
+    }
+    25% {
+      transform: scale(1.05) translateX(-2%) translateY(-1%);
+    }
+    50% {
+      transform: scale(1.08) translateX(1%) translateY(-2%);
+    }
+    75% {
+      transform: scale(1.06) translateX(-1%) translateY(1%);
+    }
+    100% {
+      transform: scale(1.1) translateX(2%) translateY(-1%);
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0) rotate(0deg);
+      opacity: 0.7;
+    }
+    25% {
+      transform: translateY(-10px) rotate(90deg);
+      opacity: 1;
+    }
+    50% {
+      transform: translateY(-20px) rotate(180deg);
+      opacity: 0.8;
+    }
+    75% {
+      transform: translateY(-10px) rotate(270deg);
+      opacity: 1;
+    }
+  }
+
+  @keyframes glow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(224, 176, 32, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 40px rgba(224, 176, 32, 0.6);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .animate-slide-down {
+    animation: slide-down 0.8s ease-out;
+  }
+
+  .animate-ken-burns {
+    animation: ken-burns 20s ease-in-out infinite;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s ease-in-out infinite;
+  }
+
+  /* Hover Effects */
+  .hover-lift {
+    transition: all 0.3s ease;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Enhanced Shadows */
+  .shadow-soft {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+
+  .shadow-strong {
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  }
 }

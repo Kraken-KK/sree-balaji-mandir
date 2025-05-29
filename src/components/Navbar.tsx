@@ -29,6 +29,7 @@ const Navbar = () => {
     { label: t('events'), href: '/events' },
     { label: t('services'), href: '/services' },
     { label: t('donations'), href: '/donations' },
+    { label: t('history'), href: '/history' },
     { label: t('signup'), href: '/signup' },
   ];
 
@@ -51,28 +52,28 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 animate-slide-down">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-full temple-gradient flex items-center justify-center">
+          {/* Logo with hover animation */}
+          <Link to="/" className="flex items-center space-x-2 group">
+            <div className="h-8 w-8 rounded-full temple-gradient flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
               <span className="text-white font-bold text-sm">ॐ</span>
             </div>
-            <span className="font-semibold text-lg">Sri Balaji Temple</span>
+            <span className="font-semibold text-lg group-hover:text-primary transition-colors">Sri Balaji Temple</span>
           </Link>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation with hover effects */}
           <div className="hidden md:flex items-center space-x-8">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 to={item.href}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
+                className={`text-sm font-medium transition-all duration-300 hover:text-primary hover:scale-105 relative ${
                   location.pathname === item.href
                     ? 'text-primary border-b-2 border-primary'
                     : 'text-muted-foreground'
-                }`}
+                } after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left`}
               >
                 {item.label}
               </Link>
@@ -80,26 +81,27 @@ const Navbar = () => {
             
             <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="hover:scale-105 transition-transform">
                   {t('admin')}
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="animate-scale-in">
                 <DialogHeader>
-                  <DialogTitle>{t('label_secret_code')}</DialogTitle>
+                  <DialogTitle>{t('secretCode')}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="adminCode">{t('label_secret_code')}</Label>
+                    <Label htmlFor="adminCode">{t('secretCode')}</Label>
                     <Input
                       id="adminCode"
                       type="password"
                       value={adminCode}
                       onChange={(e) => setAdminCode(e.target.value)}
                       placeholder="Enter 6-digit code"
+                      className="transition-all duration-300 focus:scale-105"
                     />
                   </div>
-                  <Button onClick={handleAdminAccess} className="w-full">
+                  <Button onClick={handleAdminAccess} className="w-full hover:scale-105 transition-transform">
                     {t('enter')}
                   </Button>
                 </div>
@@ -107,11 +109,11 @@ const Navbar = () => {
             </Dialog>
           </div>
 
-          {/* Controls */}
+          {/* Controls with animations */}
           <div className="flex items-center space-x-4">
-            {/* Language Selector */}
+            {/* Language Selector with hover effect */}
             <Select value={language} onValueChange={(value: 'en' | 'hi' | 'te') => setLanguage(value)}>
-              <SelectTrigger className="w-20">
+              <SelectTrigger className="w-20 hover:scale-105 transition-transform">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -121,8 +123,8 @@ const Navbar = () => {
               </SelectContent>
             </Select>
 
-            {/* Theme Toggle */}
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
+            {/* Theme Toggle with rotation animation */}
+            <Button variant="ghost" size="icon" onClick={toggleTheme} className="hover:scale-110 hover:rotate-180 transition-all duration-300">
               {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </Button>
 
@@ -130,20 +132,21 @@ const Navbar = () => {
             <div className="md:hidden">
               <Sheet open={isOpen} onOpenChange={setIsOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" className="hover:scale-110 transition-transform">
                     <Menu className="h-4 w-4" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-[300px]">
+                <SheetContent side="right" className="w-[300px] animate-slide-in-right">
                   <div className="flex flex-col space-y-4 mt-8">
-                    {navItems.map((item) => (
+                    {navItems.map((item, index) => (
                       <Link
                         key={item.href}
                         to={item.href}
                         onClick={() => setIsOpen(false)}
-                        className={`text-lg font-medium transition-colors hover:text-primary ${
+                        className={`text-lg font-medium transition-all duration-300 hover:text-primary hover:scale-105 animate-fade-in ${
                           location.pathname === item.href ? 'text-primary' : 'text-muted-foreground'
                         }`}
+                        style={{ animationDelay: `${index * 0.1}s` }}
                       >
                         {item.label}
                       </Link>
@@ -154,7 +157,8 @@ const Navbar = () => {
                         setIsOpen(false);
                         setIsAdminDialogOpen(true);
                       }}
-                      className="justify-start"
+                      className="justify-start hover:scale-105 transition-transform animate-fade-in"
+                      style={{ animationDelay: `${navItems.length * 0.1}s` }}
                     >
                       {t('admin')}
                     </Button>
