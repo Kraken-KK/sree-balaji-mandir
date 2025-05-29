@@ -224,7 +224,7 @@ const History = () => {
         {/* Call to Action */}
         <section className="text-center animate-fade-in">
           <Card className="p-12 temple-gradient text-white relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Cpath d="M20 20h60v60H20z" fill="rgba(255,255,255,0.1)"/%3E%3C/svg%3E')] opacity-20" />
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"%3E%3Cpath d=\"M20 20h60v60H20z\" fill=\"rgba(255,255,255,0.1)\"/%3E%3C/svg%3E')] opacity-20" />
             <div className="relative z-10">
               <h2 className="text-3xl font-bold mb-4">Be Part of Our Legacy</h2>
               <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">

@@ -152,7 +152,7 @@ const Index = () => {
               <Card key={index} className="group hover:shadow-2xl transition-all duration-500 overflow-hidden hover:-translate-y-3 animate-slide-up" style={{ animationDelay: `${index * 0.2}s` }}>
                 <div className={`h-48 bg-gradient-to-br ${feature.gradient} relative overflow-hidden`}>
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                  <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Cpath d="M0 0h100v100H0z" fill="none"/%3E%3Cpath d="M20 20h60v60H20z" fill="rgba(255,255,255,0.1)"/%3E%3C/svg%3E')] opacity-20 group-hover:opacity-30 transition-opacity" />
+                  <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"%3E%3Cpath d=\"M0 0h100v100H0z\" fill=\"none\"/%3E%3Cpath d=\"M20 20h60v60H20z\" fill=\"rgba(255,255,255,0.1)\"/%3E%3C/svg%3E')] opacity-20 group-hover:opacity-30 transition-opacity" />
                   <div className="absolute bottom-4 left-4 text-white">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-white/20 rounded-full group-hover:bg-white/30 transition-colors">
@@ -182,7 +182,7 @@ const Index = () => {
       <footer className="bg-secondary text-white py-16 relative overflow-hidden">
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Cpath d="M10 10h80v80H10z" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/%3E%3C/svg%3E')] bg-repeat" />
+          <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"%3E%3Cpath d=\"M10 10h80v80H10z\" fill=\"none\" stroke=\"rgba(255,255,255,0.1)\" stroke-width=\"1\"/%3E%3C/svg%3E')] bg-repeat" />
         </div>
         
         <div className="container mx-auto px-4 relative z-10">
