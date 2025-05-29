@@ -8,10 +8,12 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, userData?: any) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: any) => Promise<void>;
+  checkAdminCode: (code: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,30 +30,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
 
+  const ADMIN_CODE = "225255";
+
   useEffect(() => {
+    // Get initial session
+    const getSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Error getting session:', error);
+      } else {
+        setSession(session);
+        setUser(session?.user ?? null);
+        checkAdminStatus(session?.user);
+      }
+      setLoading(false);
+    };
+
+    getSession();
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
+        checkAdminStatus(session?.user);
         setLoading(false);
       }
     );
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
     return () => subscription.unsubscribe();
   }, []);
 
+  const checkAdminStatus = async (user: User | null) => {
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      // Check if user has admin privileges (you can customize this logic)
+      const adminEmail = user.email?.toLowerCase();
+      setIsAdmin(adminEmail === 'admin@sribalajitemple.org' || profile?.username === 'admin');
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    }
+  };
+
+  const checkAdminCode = (code: string): boolean => {
+    return code === ADMIN_CODE;
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -70,16 +112,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         variant: "destructive",
       });
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, userData?: any) => {
     try {
+      setLoading(true);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: userData
+          data: {
+            full_name: userData?.fullName || userData?.username || 'User',
+            username: userData?.username || email.split('@')[0],
+            phone: userData?.phone || '',
+            ...userData
+          }
         }
       });
       
@@ -87,7 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast({
         title: "Account created!",
-        description: "Welcome to Sri Balaji Temple community!",
+        description: "Welcome to Sri Balaji Temple community! Please check your email to verify your account.",
       });
     } catch (error: any) {
       toast({
@@ -96,6 +146,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         variant: "destructive",
       });
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -104,6 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
+      setIsAdmin(false);
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
@@ -123,7 +176,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const { error } = await supabase
         .from('user_profiles')
-        .upsert({ user_id: user.id, ...data });
+        .upsert({ 
+          user_id: user.id, 
+          ...data,
+          updated_at: new Date().toISOString()
+        });
       
       if (error) throw error;
       
@@ -146,10 +203,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       session,
       loading,
+      isAdmin,
       signIn,
       signUp,
       signOut,
       updateProfile,
+      checkAdminCode,
     }}>
       {children}
     </AuthContext.Provider>

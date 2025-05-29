@@ -1,5 +1,5 @@
-
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,58 +7,64 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useToast } from '@/hooks/use-toast';
-import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 const SignUp = () => {
   const { t } = useLanguage();
-  const { toast } = useToast();
+  const { signUp } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [signupData, setSignupData] = useState({
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
     phone: '',
+    fullName: '',
     newsletter: false,
     terms: false,
   });
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (signupData.password !== signupData.confirmPassword) {
-      toast({
-        title: "Password Mismatch",
-        description: "Passwords do not match. Please try again.",
-        variant: "destructive",
-      });
       return;
     }
 
     if (!signupData.terms) {
-      toast({
-        title: "Terms Required",
-        description: "Please accept the terms and conditions.",
-        variant: "destructive",
-      });
       return;
     }
 
-    console.log('Signup submitted:', signupData);
-    toast({
-      title: t('msg_signup_success'),
-      description: 'Welcome to Sri Balaji Temple community!',
-    });
-    
-    setSignupData({
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      phone: '',
-      newsletter: false,
-      terms: false,
-    });
+    try {
+      setLoading(true);
+      await signUp(signupData.email, signupData.password, {
+        username: signupData.username,
+        fullName: signupData.fullName,
+        phone: signupData.phone,
+        newsletter: signupData.newsletter,
+      });
+      
+      // Reset form
+      setSignupData({
+        username: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        phone: '',
+        fullName: '',
+        newsletter: false,
+        terms: false,
+      });
+      
+      // Redirect to home page
+      navigate('/');
+    } catch (error) {
+      console.error('Signup error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -67,14 +73,14 @@ const SignUp = () => {
       
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-md mx-auto">
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 animate-fade-in">
             <h1 className="text-3xl font-bold mb-2">{t('signup_title')}</h1>
             <p className="text-muted-foreground">
               Join our temple community and stay connected with all events and services
             </p>
           </div>
 
-          <Card>
+          <Card className="animate-slide-up">
             <CardHeader>
               <CardTitle>Create Your Account</CardTitle>
               <CardDescription>
@@ -83,6 +89,18 @@ const SignUp = () => {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSignup} className="space-y-4">
+                <div>
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    value={signupData.fullName}
+                    onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
+                    placeholder="Enter your full name"
+                    required
+                  />
+                </div>
+
                 <div>
                   <Label htmlFor="username">{t('label_username')}</Label>
                   <Input
@@ -115,7 +133,6 @@ const SignUp = () => {
                     value={signupData.phone}
                     onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
                     placeholder="Enter your phone number"
-                    required
                   />
                 </div>
 
@@ -182,15 +199,23 @@ const SignUp = () => {
                 <Button 
                   type="submit" 
                   className="w-full temple-gradient text-white"
+                  disabled={loading}
                 >
-                  {t('signup_submit')}
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    t('signup_submit')
+                  )}
                 </Button>
               </form>
 
               <div className="mt-6 text-center">
                 <p className="text-sm text-muted-foreground">
                   Already have an account?{' '}
-                  <Link to="#" className="text-primary hover:underline">
+                  <Link to="/auth" className="text-primary hover:underline">
                     Sign in
                   </Link>
                 </p>
