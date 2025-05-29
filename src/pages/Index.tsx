@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -11,10 +10,10 @@ const Index = () => {
   const { t } = useLanguage();
 
   const stats = [
-    { label: t('devotees'), value: '1.2M', icon: Users },
-    { label: t('eventsCount'), value: '350+', icon: Calendar },
-    { label: t('donationsAmount'), value: '₹5Cr+', icon: Heart },
-    { label: t('liveVisitors'), value: '4,200', icon: Sparkles },
+    { label: t('devotees'), value: '10k+', icon: Users },
+    { label: t('eventsCount'), value: '500+', icon: Calendar },
+    { label: t('donationsAmount'), value: '₹10L+', icon: Heart },
+    { label: t('liveVisitors'), value: '100', icon: Sparkles },
   ];
 
   const features = [
@@ -51,7 +50,9 @@ const Index = () => {
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat transform scale-105 animate-ken-burns"
           style={{
-            backgroundImage: 'url("https://images.unsplash.com/photo-1509002464246-2fa0b23bb7f1?auto=format&fit=crop&w=2000&q=80")',
+            backgroundImage: 'url("https://wallpapers.com/images/featured/lord-venkateswara-ju1irfhiq1xd07jr.jpg")',
+            opacity: 0.25,
+            zIndex: 1,
           }}
         />
         
