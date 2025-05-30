@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,29 +7,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
 
-interface Event {
-  id: string;
-  name: string;
-  date: string;
-  time: string;
-  location: string;
-  description: string;
-  image?: string;
-}
+type Event = Tables<'events'>;
 
 export const AdminEventManager = () => {
   const { toast } = useToast();
-  const [events, setEvents] = useState<Event[]>([
-    {
-      id: '1',
-      name: 'Diwali Celebration',
-      date: '2024-11-01',
-      time: '6:00 PM',
-      location: 'Main Temple Hall',
-      description: 'Grand celebration of the festival of lights',
-    }
-  ]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(false);
   
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -42,6 +27,23 @@ export const AdminEventManager = () => {
     description: '',
     image: '',
   });
+
+  const fetchEvents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*');
+      if (error) {
+        throw error;
+      }
+      setEvents(data);
+    } catch (error) {
+      toast({
+        title: "Error fetching events",
+        description: "Failed to fetch events.",
+      });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +88,14 @@ export const AdminEventManager = () => {
 
   const handleEdit = (event: Event) => {
     setEditingEvent(event);
-    setEventForm(event);
+    setEventForm({
+      name: event.name,
+      date: event.date,
+      time: event.time,
+      location: event.location,
+      description: event.description || '',
+      image: event.image || '',
+    });
     setIsDialogOpen(true);
   };
 
