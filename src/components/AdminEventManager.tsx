@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -28,6 +29,10 @@ export const AdminEventManager = () => {
     image: '',
   });
 
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
   const fetchEvents = async () => {
     try {
       const { data, error } = await supabase
@@ -36,7 +41,7 @@ export const AdminEventManager = () => {
       if (error) {
         throw error;
       }
-      setEvents(data);
+      setEvents(data || []);
     } catch (error) {
       toast({
         title: "Error fetching events",
@@ -45,32 +50,60 @@ export const AdminEventManager = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    if (editingEvent) {
-      setEvents(events.map(event => 
-        event.id === editingEvent.id 
-          ? { ...event, ...eventForm }
-          : event
-      ));
+    try {
+      if (editingEvent) {
+        const { error } = await supabase
+          .from('events')
+          .update({
+            name: eventForm.name,
+            date: eventForm.date,
+            time: eventForm.time,
+            location: eventForm.location,
+            description: eventForm.description,
+            image: eventForm.image || null,
+          })
+          .eq('id', editingEvent.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Event updated",
+          description: "Event has been updated successfully.",
+        });
+      } else {
+        const { error } = await supabase
+          .from('events')
+          .insert({
+            name: eventForm.name,
+            date: eventForm.date,
+            time: eventForm.time,
+            location: eventForm.location,
+            description: eventForm.description,
+            image: eventForm.image || null,
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: "Event created",
+          description: "New event has been created successfully.",
+        });
+      }
+      
+      await fetchEvents();
+      resetForm();
+    } catch (error) {
       toast({
-        title: "Event updated",
-        description: "Event has been updated successfully.",
+        title: "Error",
+        description: "Failed to save event.",
       });
-    } else {
-      const newEvent: Event = {
-        id: Date.now().toString(),
-        ...eventForm,
-      };
-      setEvents([...events, newEvent]);
-      toast({
-        title: "Event created",
-        description: "New event has been created successfully.",
-      });
+    } finally {
+      setLoading(false);
     }
-    
-    resetForm();
   };
 
   const resetForm = () => {
@@ -99,12 +132,27 @@ export const AdminEventManager = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (eventId: string) => {
-    setEvents(events.filter(event => event.id !== eventId));
-    toast({
-      title: "Event deleted",
-      description: "Event has been deleted successfully.",
-    });
+  const handleDelete = async (eventId: string) => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Event deleted",
+        description: "Event has been deleted successfully.",
+      });
+
+      await fetchEvents();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete event.",
+      });
+    }
   };
 
   return (
@@ -171,7 +219,6 @@ export const AdminEventManager = () => {
                   id="description"
                   value={eventForm.description}
                   onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
-                  required
                 />
               </div>
               <div>
@@ -187,8 +234,8 @@ export const AdminEventManager = () => {
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Cancel
                 </Button>
-                <Button type="submit">
-                  {editingEvent ? 'Update' : 'Create'} Event
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Saving...' : editingEvent ? 'Update' : 'Create'} Event
                 </Button>
               </div>
             </form>
