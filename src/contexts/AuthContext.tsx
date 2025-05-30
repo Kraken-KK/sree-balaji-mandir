@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -261,7 +260,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUpWithPhone = async (phone: string, userData?: any) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.auth.signUp({
+      // For phone sign up, we use signInWithOtp which will create a user if they don't exist
+      const { data, error } = await supabase.auth.signInWithOtp({
         phone,
         options: {
           data: {
