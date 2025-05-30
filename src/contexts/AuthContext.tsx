@@ -11,7 +11,10 @@ interface AuthContextType {
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithPhone: (phone: string) => Promise<void>;
+  verifyOTP: (phone: string, otp: string) => Promise<void>;
   signUp: (email: string, password: string, userData?: any) => Promise<void>;
+  signUpWithPhone: (phone: string, userData?: any) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: any) => Promise<void>;
   checkAdminCode: (code: string) => boolean;
@@ -37,17 +40,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const ADMIN_CODE = "225255";
 
   useEffect(() => {
+    let isMounted = true;
+
     // Get initial session
     const getSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error getting session:', error);
-      } else {
-        setSession(session);
-        setUser(session?.user ?? null);
-        checkAdminStatus(session?.user);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error);
+        } else if (isMounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            checkAdminStatus(session.user);
+          }
+        }
+      } catch (error) {
+        console.error('Session initialization error:', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
 
     getSession();
@@ -56,14 +70,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-        checkAdminStatus(session?.user);
-        setLoading(false);
+        if (isMounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            // Defer admin check to prevent deadlocks
+            setTimeout(() => {
+              if (isMounted) {
+                checkAdminStatus(session.user);
+              }
+            }, 0);
+          } else {
+            setIsAdmin(false);
+          }
+          setLoading(false);
+        }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const checkAdminStatus = async (user: User | null) => {
@@ -132,8 +160,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Note: The actual sign-in will happen via redirect, so we don't show success toast here
     } catch (error: any) {
+      console.error('Google sign in error:', error);
       toast({
         title: "Google sign in failed",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signInWithPhone = async (phone: string) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.auth.signInWithOtp({
+        phone,
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "OTP sent",
+        description: "Please check your phone for the verification code.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Phone sign in failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOTP = async (phone: string, otp: string) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone,
+        token: otp,
+        type: 'sms'
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Welcome!",
+        description: "You have successfully signed in.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Verification failed",
         description: error.message,
         variant: "destructive",
       });
@@ -168,6 +249,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       toast({
         title: "Sign up failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signUpWithPhone = async (phone: string, userData?: any) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.auth.signUp({
+        phone,
+        options: {
+          data: {
+            full_name: userData?.fullName || 'User',
+            username: userData?.username || phone,
+            ...userData
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "OTP sent",
+        description: "Please check your phone for the verification code to complete registration.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Phone sign up failed",
         description: error.message,
         variant: "destructive",
       });
@@ -232,7 +345,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAdmin,
       signIn,
       signInWithGoogle,
+      signInWithPhone,
+      verifyOTP,
       signUp,
+      signUpWithPhone,
       signOut,
       updateProfile,
       checkAdminCode,

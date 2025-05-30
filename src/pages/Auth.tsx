@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,11 +10,14 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, User, Mail, Lock, Phone } from 'lucide-react';
 
 const Auth = () => {
-  const { signIn, signInWithGoogle, signUp, user, loading } = useAuth();
+  const { signIn, signInWithGoogle, signInWithPhone, verifyOTP, signUp, signUpWithPhone, user, loading } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [showOTPInput, setShowOTPInput] = useState(false);
+  const [phoneForOTP, setPhoneForOTP] = useState('');
   const [signInData, setSignInData] = useState({ email: '', password: '' });
+  const [phoneSignInData, setPhoneSignInData] = useState({ phone: '', otp: '' });
   const [signUpData, setSignUpData] = useState({
     email: '',
     password: '',
@@ -23,6 +25,12 @@ const Auth = () => {
     fullName: '',
     phone: '',
   });
+  const [phoneSignUpData, setPhoneSignUpData] = useState({
+    phone: '',
+    fullName: '',
+    otp: '',
+  });
+  const [showPhoneSignUpOTP, setShowPhoneSignUpOTP] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -37,6 +45,33 @@ const Auth = () => {
       await signIn(signInData.email, signInData.password);
     } catch (error) {
       console.error('Sign in error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePhoneSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await signInWithPhone(phoneSignInData.phone);
+      setPhoneForOTP(phoneSignInData.phone);
+      setShowOTPInput(true);
+    } catch (error) {
+      console.error('Phone sign in error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOTPVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await verifyOTP(phoneForOTP, phoneSignInData.otp);
+      setShowOTPInput(false);
+    } catch (error) {
+      console.error('OTP verification error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -67,6 +102,34 @@ const Auth = () => {
       });
     } catch (error) {
       console.error('Sign up error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePhoneSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await signUpWithPhone(phoneSignUpData.phone, {
+        full_name: phoneSignUpData.fullName,
+      });
+      setShowPhoneSignUpOTP(true);
+    } catch (error) {
+      console.error('Phone sign up error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePhoneSignUpOTPVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await verifyOTP(phoneSignUpData.phone, phoneSignUpData.otp);
+      setShowPhoneSignUpOTP(false);
+    } catch (error) {
+      console.error('Phone sign up OTP verification error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -134,42 +197,104 @@ const Auth = () => {
                   </div>
                 </div>
 
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signin-email"
-                        type="email"
-                        placeholder="Enter your email"
-                        className="pl-10"
-                        value={signInData.email}
-                        onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signin-password"
-                        type="password"
-                        placeholder="Enter your password"
-                        className="pl-10"
-                        value={signInData.password}
-                        onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <Button type="submit" className="w-full temple-gradient" disabled={isLoading}>
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    Sign In
-                  </Button>
-                </form>
+                <Tabs defaultValue="email" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="email">Email</TabsTrigger>
+                    <TabsTrigger value="phone">Phone</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="email" className="space-y-4">
+                    <form onSubmit={handleSignIn} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signin-email">Email</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="signin-email"
+                            type="email"
+                            placeholder="Enter your email"
+                            className="pl-10"
+                            value={signInData.email}
+                            onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signin-password">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="signin-password"
+                            type="password"
+                            placeholder="Enter your password"
+                            className="pl-10"
+                            value={signInData.password}
+                            onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <Button type="submit" className="w-full temple-gradient" disabled={isLoading}>
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Sign In with Email
+                      </Button>
+                    </form>
+                  </TabsContent>
+                  
+                  <TabsContent value="phone" className="space-y-4">
+                    {!showOTPInput ? (
+                      <form onSubmit={handlePhoneSignIn} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="signin-phone">Phone Number</Label>
+                          <div className="relative">
+                            <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="signin-phone"
+                              type="tel"
+                              placeholder="Enter your phone number"
+                              className="pl-10"
+                              value={phoneSignInData.phone}
+                              onChange={(e) => setPhoneSignInData({ ...phoneSignInData, phone: e.target.value })}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <Button type="submit" className="w-full temple-gradient" disabled={isLoading}>
+                          {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          Send OTP
+                        </Button>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleOTPVerification} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="signin-otp">Verification Code</Label>
+                          <Input
+                            id="signin-otp"
+                            type="text"
+                            placeholder="Enter 6-digit code"
+                            maxLength={6}
+                            value={phoneSignInData.otp}
+                            onChange={(e) => setPhoneSignInData({ ...phoneSignInData, otp: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <Button type="submit" className="w-full temple-gradient" disabled={isLoading}>
+                          {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          Verify & Sign In
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="w-full"
+                          onClick={() => setShowOTPInput(false)}
+                        >
+                          Back
+                        </Button>
+                      </form>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
               
               <TabsContent value="signup" className="space-y-4">
@@ -203,87 +328,164 @@ const Auth = () => {
                   </div>
                 </div>
 
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-name"
-                        type="text"
-                        placeholder="Enter your full name"
-                        className="pl-10"
-                        value={signUpData.fullName}
-                        onChange={(e) => setSignUpData({ ...signUpData, fullName: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="Enter your email"
-                        className="pl-10"
-                        value={signUpData.email}
-                        onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-phone">Phone (Optional)</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-phone"
-                        type="tel"
-                        placeholder="Enter your phone number"
-                        className="pl-10"
-                        value={signUpData.phone}
-                        onChange={(e) => setSignUpData({ ...signUpData, phone: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-password"
-                        type="password"
-                        placeholder="Create a password"
-                        className="pl-10"
-                        value={signUpData.password}
-                        onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
-                        required
-                        minLength={6}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-confirm">Confirm Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-confirm"
-                        type="password"
-                        placeholder="Confirm your password"
-                        className="pl-10"
-                        value={signUpData.confirmPassword}
-                        onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <Button type="submit" className="w-full temple-gradient" disabled={isLoading}>
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    Create Account
-                  </Button>
-                </form>
+                <Tabs defaultValue="email" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="email">Email</TabsTrigger>
+                    <TabsTrigger value="phone">Phone</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="email" className="space-y-4">
+                    <form onSubmit={handleSignUp} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-name">Full Name</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="signup-name"
+                            type="text"
+                            placeholder="Enter your full name"
+                            className="pl-10"
+                            value={signUpData.fullName}
+                            onChange={(e) => setSignUpData({ ...signUpData, fullName: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-email">Email</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="signup-email"
+                            type="email"
+                            placeholder="Enter your email"
+                            className="pl-10"
+                            value={signUpData.email}
+                            onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-phone">Phone (Optional)</Label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="signup-phone"
+                            type="tel"
+                            placeholder="Enter your phone number"
+                            className="pl-10"
+                            value={signUpData.phone}
+                            onChange={(e) => setSignUpData({ ...signUpData, phone: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-password">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="signup-password"
+                            type="password"
+                            placeholder="Create a password"
+                            className="pl-10"
+                            value={signUpData.password}
+                            onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
+                            required
+                            minLength={6}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-confirm">Confirm Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="signup-confirm"
+                            type="password"
+                            placeholder="Confirm your password"
+                            className="pl-10"
+                            value={signUpData.confirmPassword}
+                            onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <Button type="submit" className="w-full temple-gradient" disabled={isLoading}>
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Create Account with Email
+                      </Button>
+                    </form>
+                  </TabsContent>
+                  
+                  <TabsContent value="phone" className="space-y-4">
+                    {!showPhoneSignUpOTP ? (
+                      <form onSubmit={handlePhoneSignUp} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-phone-name">Full Name</Label>
+                          <div className="relative">
+                            <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="signup-phone-name"
+                              type="text"
+                              placeholder="Enter your full name"
+                              className="pl-10"
+                              value={phoneSignUpData.fullName}
+                              onChange={(e) => setPhoneSignUpData({ ...phoneSignUpData, fullName: e.target.value })}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-phone-number">Phone Number</Label>
+                          <div className="relative">
+                            <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="signup-phone-number"
+                              type="tel"
+                              placeholder="Enter your phone number"
+                              className="pl-10"
+                              value={phoneSignUpData.phone}
+                              onChange={(e) => setPhoneSignUpData({ ...phoneSignUpData, phone: e.target.value })}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <Button type="submit" className="w-full temple-gradient" disabled={isLoading}>
+                          {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          Send Verification Code
+                        </Button>
+                      </form>
+                    ) : (
+                      <form onSubmit={handlePhoneSignUpOTPVerification} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="signup-phone-otp">Verification Code</Label>
+                          <Input
+                            id="signup-phone-otp"
+                            type="text"
+                            placeholder="Enter 6-digit code"
+                            maxLength={6}
+                            value={phoneSignUpData.otp}
+                            onChange={(e) => setPhoneSignUpData({ ...phoneSignUpData, otp: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <Button type="submit" className="w-full temple-gradient" disabled={isLoading}>
+                          {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          Verify & Create Account
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="w-full"
+                          onClick={() => setShowPhoneSignUpOTP(false)}
+                        >
+                          Back
+                        </Button>
+                      </form>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
             </Tabs>
           </CardContent>
