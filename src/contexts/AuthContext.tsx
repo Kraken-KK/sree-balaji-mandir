@@ -10,6 +10,7 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signUp: (email: string, password: string, userData?: any) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: any) => Promise<void>;
@@ -78,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', user.id)
         .single();
 
-      // Check if user has admin privileges (you can customize this logic)
+      // Check if user has admin privileges
       const adminEmail = user.email?.toLowerCase();
       setIsAdmin(adminEmail === 'admin@sribalajitemple.org' || profile?.username === 'admin');
     } catch (error) {
@@ -108,6 +109,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       toast({
         title: "Sign in failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Note: The actual sign-in will happen via redirect, so we don't show success toast here
+    } catch (error: any) {
+      toast({
+        title: "Google sign in failed",
         description: error.message,
         variant: "destructive",
       });
@@ -205,6 +231,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loading,
       isAdmin,
       signIn,
+      signInWithGoogle,
       signUp,
       signOut,
       updateProfile,
