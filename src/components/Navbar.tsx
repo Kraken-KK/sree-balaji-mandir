@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Menu, Moon, Sun, User, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
@@ -160,6 +160,16 @@ const Navbar = () => {
             <Button variant="ghost" size="icon" onClick={toggleTheme} className="hover:scale-110 hover:rotate-180 transition-all duration-200">
               {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </Button>
+
+            {/* Profile Avatar */}
+            {user && (
+              <div className="ml-2">
+                <Avatar>
+                  <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.full_name || user.email || 'Profile'} />
+                  <AvatarFallback>{(user.user_metadata?.full_name || user.email || 'U')[0]}</AvatarFallback>
+                </Avatar>
+              </div>
+            )}
 
             {/* Mobile Menu */}
             <div className="md:hidden">

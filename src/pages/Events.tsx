@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar, Clock, Users, MapPin } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
 
 const Events = () => {
   const { t } = useLanguage();
@@ -20,75 +21,23 @@ const Events = () => {
     phone: '',
     members: 1,
   });
+  const [events, setEvents] = useState<Tables<'events'>[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openDialogId, setOpenDialogId] = useState<string | null>(null);
 
-  const eventsData = {
-    festivals: [
-      {
-        id: 1,
-        name: 'Diwali Celebration',
-        date: '2024-11-01',
-        time: '6:00 PM',
-        location: 'Main Temple Hall',
-        participants: 500,
-        description: 'Grand celebration of the festival of lights with special puja and cultural programs.',
-        image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=800&q=80',
-      },
-      {
-        id: 2,
-        name: 'Holi Festival',
-        date: '2024-03-13',
-        time: '10:00 AM',
-        location: 'Temple Courtyard',
-        participants: 800,
-        description: 'Colorful celebration of spring with traditional rituals and community gathering.',
-        image: 'https://images.unsplash.com/photo-1583391733956-6c78276477e2?auto=format&fit=crop&w=800&q=80',
-      },
-    ],
-    daily: [
-      {
-        id: 3,
-        name: 'Morning Aarti',
-        date: 'Daily',
-        time: '6:00 AM',
-        location: 'Sanctum Sanctorum',
-        participants: 150,
-        description: 'Daily morning prayers and devotional songs to start the day with divine blessings.',
-        image: 'https://images.unsplash.com/photo-1564399580075-5dfe19c205f3?auto=format&fit=crop&w=800&q=80',
-      },
-      {
-        id: 4,
-        name: 'Evening Aarti',
-        date: 'Daily',
-        time: '7:00 PM',
-        location: 'Sanctum Sanctorum',
-        participants: 200,
-        description: 'Evening prayers and aarti ceremony with lamp lighting and devotional music.',
-        image: 'https://images.unsplash.com/photo-1590736969955-71cc94901144?auto=format&fit=crop&w=800&q=80',
-      },
-    ],
-    special: [
-      {
-        id: 5,
-        name: 'Spiritual Discourse',
-        date: '2024-12-15',
-        time: '4:00 PM',
-        location: 'Conference Hall',
-        participants: 300,
-        description: 'Special spiritual discourse by renowned saints and scholars.',
-        image: 'https://images.unsplash.com/photo-1596740284477-64d3ce18308c?auto=format&fit=crop&w=800&q=80',
-      },
-      {
-        id: 6,
-        name: 'Charity Drive',
-        date: '2024-01-26',
-        time: '10:00 AM',
-        location: 'Temple Premises',
-        participants: 400,
-        description: 'Community service and charity distribution to help the needy.',
-        image: 'https://images.unsplash.com/photo-1548624313-24daa93c3be3?auto=format&fit=crop&w=800&q=80',
-      },
-    ],
-  };
+  useEffect(() => {
+    const fetchEvents = async () => {
+      setLoading(true);
+      const { data, error } = await supabase.from('events').select('*').order('date', { ascending: true });
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to fetch events.' });
+      } else {
+        setEvents(data || []);
+      }
+      setLoading(false);
+    };
+    fetchEvents();
+  }, [toast]);
 
   const handleRegistration = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,7 +89,7 @@ const Events = () => {
         <p className="text-muted-foreground mb-6 line-clamp-3">
           {event.description}
         </p>
-        <Dialog>
+        <Dialog open={openDialogId === event.id} onOpenChange={(open) => setOpenDialogId(open ? event.id : null)}>
           <DialogTrigger asChild>
             <Button className="w-full temple-gradient text-white hover:opacity-90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
               {t('register')}
@@ -228,35 +177,20 @@ const Events = () => {
         </div>
 
         {/* Animated Tabs */}
-        <Tabs defaultValue="festivals" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8 bg-surface-light dark:bg-surface-dark animate-slide-up" style={{ animationDelay: '0.4s' }}>
-            <TabsTrigger value="festivals" className="transition-all duration-300 hover:scale-105">{t('festivals')}</TabsTrigger>
-            <TabsTrigger value="daily" className="transition-all duration-300 hover:scale-105">{t('daily')}</TabsTrigger>
-            <TabsTrigger value="special" className="transition-all duration-300 hover:scale-105">{t('special')}</TabsTrigger>
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList className="grid w-full grid-cols-1 mb-8 bg-surface-light dark:bg-surface-dark animate-slide-up" style={{ animationDelay: '0.4s' }}>
+            <TabsTrigger value="all" className="transition-all duration-300 hover:scale-105">{t('allEvents') || 'All Events'}</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="festivals">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {eventsData.festivals.map((event, index) => (
-                <EventCard key={event.id} event={event} index={index} />
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="daily">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {eventsData.daily.map((event, index) => (
-                <EventCard key={event.id} event={event} index={index} />
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="special">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {eventsData.special.map((event, index) => (
-                <EventCard key={event.id} event={event} index={index} />
-              ))}
-            </div>
+          <TabsContent value="all">
+            {loading ? (
+              <div className="text-center py-12">Loading events...</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {events.map((event, index) => (
+                  <EventCard key={event.id} event={event} index={index} />
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

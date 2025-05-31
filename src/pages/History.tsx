@@ -11,7 +11,7 @@ const History = () => {
 
   const timelineEvents = [
     {
-      year: '1875',
+      year: '2000',
       title: 'Foundation of the Temple',
       description: 'The sacred ground was blessed and construction began under the guidance of Sri Venkateshwara Swami.',
       image: 'https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&w=800&q=80',
@@ -49,9 +49,9 @@ const History = () => {
 
   const managementFamily = [
     {
-      name: 'Sri Rajesh Kumar',
-      position: 'Chief Priest',
-      since: '1995',
+      name: 'Ramarapu Charan',
+      position: 'Cheif Organiser',
+      since: '2000',
       image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
       description: 'Leading daily rituals and spiritual guidance for over 25 years.',
     },

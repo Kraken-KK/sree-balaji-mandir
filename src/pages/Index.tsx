@@ -73,8 +73,12 @@ const Index = () => {
         </div>
         
         <div className="relative z-20 text-center text-white max-w-5xl mx-auto px-4 animate-fade-in">
-          <div className="inline-block p-4 bg-white/10 rounded-full mb-6 animate-pulse">
-            <Sparkles className="w-12 h-12 text-primary" />
+          <div style={{ marginBottom: '-7rem' }}>
+            <img
+              src="https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275"
+              alt="Temple Logo"
+              className="w-80 h-80 object-contain mx-auto"
+            />
           </div>
           <h1 className="text-6xl md:text-7xl font-bold mb-8 leading-tight animate-slide-up bg-gradient-to-r from-white via-yellow-200 to-orange-200 bg-clip-text text-transparent">
             {t('welcomeTitle')}
