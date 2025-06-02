@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -148,10 +149,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
+      // Get the current origin, which will be the deployed URL or localhost
+      const redirectTo = window.location.origin;
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`
+          redirectTo: redirectTo
         }
       });
       
@@ -226,14 +230,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, userData?: any) => {
     try {
       setLoading(true);
+      // Get the current origin for email redirect
+      const redirectTo = `${window.location.origin}/`;
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: redirectTo,
           data: {
-            full_name: userData?.fullName || userData?.username || 'User',
+            full_name: userData?.full_name || userData?.fullName || 'User',
             username: userData?.username || email.split('@')[0],
-            phone: userData?.phone || '',
             ...userData
           }
         }
@@ -265,7 +272,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         phone,
         options: {
           data: {
-            full_name: userData?.fullName || 'User',
+            full_name: userData?.full_name || userData?.fullName || 'User',
             username: userData?.username || phone,
             ...userData
           }
