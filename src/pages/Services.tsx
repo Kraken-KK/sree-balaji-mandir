@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -6,11 +7,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+import { CreditCard } from 'lucide-react';
 
 const Services = () => {
   const { t } = useLanguage();
@@ -23,6 +24,7 @@ const Services = () => {
   });
   const [services, setServices] = useState<Tables<'services'>[]>([]);
   const [loading, setLoading] = useState(true);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -38,13 +40,52 @@ const Services = () => {
     fetchServices();
   }, [toast]);
 
-  const handleBooking = (service: string) => {
-    console.log('Booking for service:', service, bookingData);
-    toast({
-      title: t('msg_booking_success'),
-      description: `Your booking for ${service} has been confirmed.`,
-    });
-    setBookingData({ name: '', mobile: '', quantity: 1, service: '' });
+  const handlePayment = async (service: Tables<'services'>) => {
+    if (!bookingData.name || !bookingData.mobile) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      const totalAmount = (service.price || 0) * bookingData.quantity;
+      
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          amount: totalAmount,
+          currency: 'usd',
+          description: service.name,
+          customerEmail: `${bookingData.name.replace(/\s+/g, '').toLowerCase()}@temp.com`,
+          customerName: bookingData.name,
+          type: 'service'
+        }
+      });
+
+      if (error) throw error;
+
+      // Open Stripe checkout in a new tab
+      window.open(data.url, '_blank');
+      
+      toast({
+        title: 'Redirecting to Payment',
+        description: 'Please complete your payment in the new window.',
+      });
+      
+      setBookingData({ name: '', mobile: '', quantity: 1, service: '' });
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast({
+        title: 'Payment Error',
+        description: 'Failed to create payment session. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setPaymentLoading(false);
+    }
   };
 
   return (
@@ -127,26 +168,23 @@ const Services = () => {
                                 />
                               </div>
                               
-                              <div className="space-y-3">
-                                <Label>Payment Method</Label>
-                                <RadioGroup defaultValue="upi">
-                                  <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="upi" id="upi" />
-                                    <Label htmlFor="upi">UPI Payment</Label>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="qr" id="qr" />
-                                    <Label htmlFor="qr">QR Code Payment</Label>
-                                  </div>
-                                </RadioGroup>
+                              <div className="pt-4 border-t">
+                                <div className="flex justify-between items-center mb-4">
+                                  <span className="text-lg font-medium">Total Amount:</span>
+                                  <span className="text-xl font-bold text-primary">
+                                    ₹{((service.price || 0) * bookingData.quantity).toFixed(2)}
+                                  </span>
+                                </div>
+                                
+                                <Button 
+                                  onClick={() => handlePayment(service)} 
+                                  className="w-full temple-gradient text-white"
+                                  disabled={paymentLoading}
+                                >
+                                  <CreditCard className="w-4 h-4 mr-2" />
+                                  {paymentLoading ? 'Processing...' : 'Pay with Stripe'}
+                                </Button>
                               </div>
-                              
-                              <Button 
-                                onClick={() => handleBooking(service.name)} 
-                                className="w-full temple-gradient text-white"
-                              >
-                                Confirm & Pay
-                              </Button>
                             </div>
                           </DialogContent>
                         </Dialog>

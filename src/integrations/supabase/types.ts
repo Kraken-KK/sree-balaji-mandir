@@ -78,6 +78,21 @@ export type Database = {
         }
         Relationships: []
       }
+      user_api_keys: {
+        Row: {
+          api_key: string
+          user_id: string
+        }
+        Insert: {
+          api_key: string
+          user_id: string
+        }
+        Update: {
+          api_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           compact_mode: boolean | null

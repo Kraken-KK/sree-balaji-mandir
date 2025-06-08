@@ -18,6 +18,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Settings from "./pages/Settings";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
                 <Route path="/donations" element={<Donations />} />
                 <Route path="/signup" element={<SignUp />} />
                 <Route path="/history" element={<History />} />
+                <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="/settings" element={
                   <ProtectedRoute>
                     <Settings />
