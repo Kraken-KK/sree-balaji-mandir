@@ -6,13 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, User, Mail, Lock, Phone } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const Auth = () => {
   const { signIn, signInWithGoogle, signInWithPhone, verifyOTP, signUp, signUpWithPhone, user, loading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isPhoneLoading, setIsPhoneLoading] = useState(false);
@@ -40,6 +43,35 @@ const Auth = () => {
     }
   }, [user, navigate]);
 
+  // Format phone number to international format
+  const formatPhoneNumber = (phone: string) => {
+    // Remove all non-digits
+    const digits = phone.replace(/\D/g, '');
+    
+    // If starts with 91 (India code), add +
+    if (digits.startsWith('91') && digits.length === 12) {
+      return `+${digits}`;
+    }
+    
+    // If 10 digits, assume Indian number
+    if (digits.length === 10) {
+      return `+91${digits}`;
+    }
+    
+    // If already has country code
+    if (digits.length > 10) {
+      return `+${digits}`;
+    }
+    
+    return `+91${digits}`;
+  };
+
+  const validatePhoneNumber = (phone: string) => {
+    const formatted = formatPhoneNumber(phone);
+    // Basic validation for Indian numbers
+    return formatted.match(/^\+91[6-9]\d{9}$/);
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -54,10 +86,21 @@ const Auth = () => {
 
   const handlePhoneSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validatePhoneNumber(phoneSignInData.phone)) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Please enter a valid Indian phone number (10 digits)",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await signInWithPhone(phoneSignInData.phone);
-      setPhoneForOTP(phoneSignInData.phone);
+      const formattedPhone = formatPhoneNumber(phoneSignInData.phone);
+      await signInWithPhone(formattedPhone);
+      setPhoneForOTP(formattedPhone);
       setShowOTPInput(true);
     } catch (error) {
       console.error('Phone sign in error:', error);
@@ -68,6 +111,16 @@ const Auth = () => {
 
   const handleOTPVerification = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (phoneSignInData.otp.length !== 6) {
+      toast({
+        title: "Invalid OTP",
+        description: "Please enter the complete 6-digit OTP",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       await verifyOTP(phoneForOTP, phoneSignInData.otp);
@@ -93,6 +146,11 @@ const Auth = () => {
     e.preventDefault();
     
     if (signUpData.password !== signUpData.confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "Passwords do not match",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -110,9 +168,20 @@ const Auth = () => {
 
   const handlePhoneSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validatePhoneNumber(phoneSignUpData.phone)) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Please enter a valid Indian phone number (10 digits)",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsPhoneLoading(true);
     try {
-      await signUpWithPhone(phoneSignUpData.phone, {
+      const formattedPhone = formatPhoneNumber(phoneSignUpData.phone);
+      await signUpWithPhone(formattedPhone, {
         full_name: phoneSignUpData.fullName,
       });
       setShowPhoneSignUpOTP(true);
@@ -125,9 +194,20 @@ const Auth = () => {
 
   const handlePhoneSignUpOTPVerification = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (phoneSignUpData.otp.length !== 6) {
+      toast({
+        title: "Invalid OTP",
+        description: "Please enter the complete 6-digit OTP",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsPhoneLoading(true);
     try {
-      await verifyOTP(phoneSignUpData.phone, phoneSignUpData.otp);
+      const formattedPhone = formatPhoneNumber(phoneSignUpData.phone);
+      await verifyOTP(formattedPhone, phoneSignUpData.otp);
       setShowPhoneSignUpOTP(false);
       setShowPhoneAuth(false);
     } catch (error) {
@@ -224,13 +304,16 @@ const Auth = () => {
                             <Input
                               id="signin-phone"
                               type="tel"
-                              placeholder="Enter your phone number"
+                              placeholder="Enter 10-digit mobile number"
                               className="pl-10"
                               value={phoneSignInData.phone}
                               onChange={(e) => setPhoneSignInData({ ...phoneSignInData, phone: e.target.value })}
                               required
                             />
                           </div>
+                          <p className="text-xs text-muted-foreground">
+                            Enter your 10-digit Indian mobile number
+                          </p>
                         </div>
                         <Button type="submit" className="w-full temple-gradient" disabled={isLoading}>
                           {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
@@ -241,17 +324,25 @@ const Auth = () => {
                       <form onSubmit={handleOTPVerification} className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="signin-otp">Verification Code</Label>
-                          <Input
-                            id="signin-otp"
-                            type="text"
-                            placeholder="Enter 6-digit code"
+                          <p className="text-sm text-muted-foreground">
+                            Enter the 6-digit code sent to {phoneForOTP}
+                          </p>
+                          <InputOTP 
+                            value={phoneSignInData.otp} 
+                            onChange={(value) => setPhoneSignInData({ ...phoneSignInData, otp: value })}
                             maxLength={6}
-                            value={phoneSignInData.otp}
-                            onChange={(e) => setPhoneSignInData({ ...phoneSignInData, otp: e.target.value })}
-                            required
-                          />
+                          >
+                            <InputOTPGroup>
+                              <InputOTPSlot index={0} />
+                              <InputOTPSlot index={1} />
+                              <InputOTPSlot index={2} />
+                              <InputOTPSlot index={3} />
+                              <InputOTPSlot index={4} />
+                              <InputOTPSlot index={5} />
+                            </InputOTPGroup>
+                          </InputOTP>
                         </div>
-                        <Button type="submit" className="w-full temple-gradient" disabled={isLoading}>
+                        <Button type="submit" className="w-full temple-gradient" disabled={isLoading || phoneSignInData.otp.length !== 6}>
                           {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                           Verify & Sign In
                         </Button>
@@ -259,7 +350,10 @@ const Auth = () => {
                           type="button" 
                           variant="outline" 
                           className="w-full"
-                          onClick={() => setShowOTPInput(false)}
+                          onClick={() => {
+                            setShowOTPInput(false);
+                            setPhoneSignInData({ ...phoneSignInData, otp: '' });
+                          }}
                         >
                           Back
                         </Button>
@@ -404,13 +498,16 @@ const Auth = () => {
                         <Input
                           id="signup-phone-number"
                           type="tel"
-                          placeholder="Enter your phone number"
+                          placeholder="Enter 10-digit mobile number"
                           className="pl-10"
                           value={phoneSignUpData.phone}
                           onChange={(e) => setPhoneSignUpData({ ...phoneSignUpData, phone: e.target.value })}
                           required
                         />
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        Enter your 10-digit Indian mobile number
+                      </p>
                     </div>
                     <Button type="submit" className="w-full temple-gradient" disabled={isPhoneLoading}>
                       {isPhoneLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
@@ -429,17 +526,25 @@ const Auth = () => {
                   <form onSubmit={handlePhoneSignUpOTPVerification} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="signup-phone-otp">Verification Code</Label>
-                      <Input
-                        id="signup-phone-otp"
-                        type="text"
-                        placeholder="Enter 6-digit code"
+                      <p className="text-sm text-muted-foreground">
+                        Enter the 6-digit code sent to {formatPhoneNumber(phoneSignUpData.phone)}
+                      </p>
+                      <InputOTP 
+                        value={phoneSignUpData.otp} 
+                        onChange={(value) => setPhoneSignUpData({ ...phoneSignUpData, otp: value })}
                         maxLength={6}
-                        value={phoneSignUpData.otp}
-                        onChange={(e) => setPhoneSignUpData({ ...phoneSignUpData, otp: e.target.value })}
-                        required
-                      />
+                      >
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} />
+                          <InputOTPSlot index={1} />
+                          <InputOTPSlot index={2} />
+                          <InputOTPSlot index={3} />
+                          <InputOTPSlot index={4} />
+                          <InputOTPSlot index={5} />
+                        </InputOTPGroup>
+                      </InputOTP>
                     </div>
-                    <Button type="submit" className="w-full temple-gradient" disabled={isPhoneLoading}>
+                    <Button type="submit" className="w-full temple-gradient" disabled={isPhoneLoading || phoneSignUpData.otp.length !== 6}>
                       {isPhoneLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                       Verify & Create Account
                     </Button>
@@ -447,7 +552,10 @@ const Auth = () => {
                       type="button" 
                       variant="outline" 
                       className="w-full"
-                      onClick={() => setShowPhoneSignUpOTP(false)}
+                      onClick={() => {
+                        setShowPhoneSignUpOTP(false);
+                        setPhoneSignUpData({ ...phoneSignUpData, otp: '' });
+                      }}
                     >
                       Back
                     </Button>

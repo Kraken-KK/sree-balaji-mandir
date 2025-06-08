@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,14 +9,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, LogIn } from 'lucide-react';
 
 const Services = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [bookingData, setBookingData] = useState({
     name: '',
     mobile: '',
@@ -41,6 +45,16 @@ const Services = () => {
   }, [toast]);
 
   const handlePayment = async (service: Tables<'services'>) => {
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please sign in to book services.',
+        variant: 'destructive'
+      });
+      navigate('/auth');
+      return;
+    }
+
     if (!bookingData.name || !bookingData.mobile) {
       toast({
         title: 'Missing Information',
@@ -57,9 +71,9 @@ const Services = () => {
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
           amount: totalAmount,
-          currency: 'usd',
+          currency: 'inr',
           description: service.name,
-          customerEmail: `${bookingData.name.replace(/\s+/g, '').toLowerCase()}@temp.com`,
+          customerEmail: user.email,
           customerName: bookingData.name,
           type: 'service'
         }
@@ -99,6 +113,20 @@ const Services = () => {
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Explore our various spiritual services and book them for your special occasions
           </p>
+          {!user && (
+            <Card className="mt-6 max-w-md mx-auto">
+              <CardContent className="p-6 text-center">
+                <LogIn className="w-12 h-12 mx-auto mb-4 text-primary" />
+                <h3 className="font-semibold mb-2">Sign In Required</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Please sign in to book our services and make payments
+                </p>
+                <Button onClick={() => navigate('/auth')} className="temple-gradient text-white">
+                  Sign In Now
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Services Accordion */}
@@ -122,72 +150,85 @@ const Services = () => {
                         <span className="text-sm text-muted-foreground">
                           Duration: {service.duration}
                         </span>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button 
-                              className="temple-gradient text-white hover:opacity-90"
-                              onClick={() => setBookingData({ ...bookingData, service: service.name })}
-                            >
-                              {t('book_ticket')}
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="bg-white">
-                            <DialogHeader>
-                              <DialogTitle>Book {service.name}</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div>
-                                <Label htmlFor="name">{t('label_name')}</Label>
-                                <Input
-                                  id="name"
-                                  type="text"
-                                  value={bookingData.name}
-                                  onChange={(e) => setBookingData({ ...bookingData, name: e.target.value })}
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <Label htmlFor="mobile">{t('label_mobile')}</Label>
-                                <Input
-                                  id="mobile"
-                                  type="tel"
-                                  value={bookingData.mobile}
-                                  onChange={(e) => setBookingData({ ...bookingData, mobile: e.target.value })}
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <Label htmlFor="quantity">{t('label_tickets')}</Label>
-                                <Input
-                                  id="quantity"
-                                  type="number"
-                                  min="1"
-                                  value={bookingData.quantity}
-                                  onChange={(e) => setBookingData({ ...bookingData, quantity: parseInt(e.target.value) })}
-                                  required
-                                />
-                              </div>
-                              
-                              <div className="pt-4 border-t">
-                                <div className="flex justify-between items-center mb-4">
-                                  <span className="text-lg font-medium">Total Amount:</span>
-                                  <span className="text-xl font-bold text-primary">
-                                    ₹{((service.price || 0) * bookingData.quantity).toFixed(2)}
-                                  </span>
+                        {user ? (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                className="temple-gradient text-white hover:opacity-90"
+                                onClick={() => setBookingData({ ...bookingData, service: service.name })}
+                              >
+                                {t('book_ticket')}
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="bg-white">
+                              <DialogHeader>
+                                <DialogTitle>Book {service.name}</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div>
+                                  <Label htmlFor="name">{t('label_name')}</Label>
+                                  <Input
+                                    id="name"
+                                    type="text"
+                                    value={bookingData.name}
+                                    onChange={(e) => setBookingData({ ...bookingData, name: e.target.value })}
+                                    placeholder="Enter full name"
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="mobile">{t('label_mobile')}</Label>
+                                  <Input
+                                    id="mobile"
+                                    type="tel"
+                                    value={bookingData.mobile}
+                                    onChange={(e) => setBookingData({ ...bookingData, mobile: e.target.value })}
+                                    placeholder="Enter mobile number"
+                                    required
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="quantity">{t('label_tickets')}</Label>
+                                  <Input
+                                    id="quantity"
+                                    type="number"
+                                    min="1"
+                                    value={bookingData.quantity}
+                                    onChange={(e) => setBookingData({ ...bookingData, quantity: parseInt(e.target.value) })}
+                                    required
+                                  />
                                 </div>
                                 
-                                <Button 
-                                  onClick={() => handlePayment(service)} 
-                                  className="w-full temple-gradient text-white"
-                                  disabled={paymentLoading}
-                                >
-                                  <CreditCard className="w-4 h-4 mr-2" />
-                                  {paymentLoading ? 'Processing...' : 'Pay with Stripe'}
-                                </Button>
+                                <div className="pt-4 border-t">
+                                  <div className="flex justify-between items-center mb-4">
+                                    <span className="text-lg font-medium">Total Amount:</span>
+                                    <span className="text-xl font-bold text-primary">
+                                      ₹{((service.price || 0) * bookingData.quantity).toFixed(2)}
+                                    </span>
+                                  </div>
+                                  
+                                  <Button 
+                                    onClick={() => handlePayment(service)} 
+                                    className="w-full temple-gradient text-white"
+                                    disabled={paymentLoading}
+                                  >
+                                    <CreditCard className="w-4 h-4 mr-2" />
+                                    {paymentLoading ? 'Processing...' : 'Pay with Stripe'}
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                            </DialogContent>
+                          </Dialog>
+                        ) : (
+                          <Button 
+                            onClick={() => navigate('/auth')} 
+                            variant="outline"
+                            className="border-primary text-primary hover:bg-primary hover:text-white"
+                          >
+                            <LogIn className="w-4 h-4 mr-2" />
+                            Sign In to Book
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </AccordionContent>
@@ -214,6 +255,7 @@ const Services = () => {
                 <li>• For cancellations, please contact us at least 12 hours before</li>
                 <li>• Photography and videography require special permission</li>
                 <li>• Mobile phones should be kept in silent mode during ceremonies</li>
+                <li>• Authentication is required for all service bookings</li>
               </ul>
             </CardContent>
           </Card>

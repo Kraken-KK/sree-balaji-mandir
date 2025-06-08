@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,13 +8,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, LogIn } from 'lucide-react';
 
 const Donations = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [donationData, setDonationData] = useState({
     amount: '',
     customAmount: '',
@@ -36,6 +40,16 @@ const Donations = () => {
 
   const handleDonation = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please sign in to make donations.',
+        variant: 'destructive'
+      });
+      navigate('/auth');
+      return;
+    }
     
     if (!donationData.donorName || !donationData.email || !donationData.phone) {
       toast({
@@ -64,7 +78,7 @@ const Donations = () => {
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
           amount: Number(finalAmount),
-          currency: 'usd',
+          currency: 'inr',
           description: selectedPurpose,
           customerEmail: donationData.email,
           customerName: donationData.donorName,
@@ -113,11 +127,25 @@ const Donations = () => {
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             {t('donation_subtitle')}
           </p>
+          {!user && (
+            <Card className="mt-6 max-w-md mx-auto">
+              <CardContent className="p-6 text-center">
+                <LogIn className="w-12 h-12 mx-auto mb-4 text-primary" />
+                <h3 className="font-semibold mb-2">Sign In Required</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Please sign in to make donations and receive tax receipts
+                </p>
+                <Button onClick={() => navigate('/auth')} className="temple-gradient text-white">
+                  Sign In Now
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Donation Form */}
-          <Card>
+          <Card className={!user ? 'opacity-50 pointer-events-none' : ''}>
             <CardHeader>
               <CardTitle>Make a Donation</CardTitle>
               <CardDescription>
@@ -128,7 +156,7 @@ const Donations = () => {
               <form onSubmit={handleDonation} className="space-y-6">
                 {/* Amount Selection */}
                 <div>
-                  <Label className="text-base font-medium mb-3 block">Select Amount</Label>
+                  <Label className="text-base font-medium mb-3 block">Select Amount (₹)</Label>
                   <RadioGroup
                     value={donationData.amount}
                     onValueChange={(value) => setDonationData({ ...donationData, amount: value })}
@@ -155,12 +183,12 @@ const Donations = () => {
                 {/* Custom Amount */}
                 {donationData.amount === 'Other' && (
                   <div>
-                    <Label htmlFor="customAmount">Custom Amount</Label>
+                    <Label htmlFor="customAmount">Custom Amount (₹)</Label>
                     <Input
                       id="customAmount"
                       type="number"
                       min="1"
-                      placeholder="Enter amount"
+                      placeholder="Enter amount in rupees"
                       value={donationData.customAmount}
                       onChange={(e) => setDonationData({ ...donationData, customAmount: e.target.value })}
                       required
@@ -195,6 +223,7 @@ const Donations = () => {
                       type="text"
                       value={donationData.donorName}
                       onChange={(e) => setDonationData({ ...donationData, donorName: e.target.value })}
+                      placeholder="Enter your full name"
                       required
                     />
                   </div>
@@ -205,6 +234,7 @@ const Donations = () => {
                       type="email"
                       value={donationData.email}
                       onChange={(e) => setDonationData({ ...donationData, email: e.target.value })}
+                      placeholder="Enter your email"
                       required
                     />
                   </div>
@@ -215,6 +245,7 @@ const Donations = () => {
                       type="tel"
                       value={donationData.phone}
                       onChange={(e) => setDonationData({ ...donationData, phone: e.target.value })}
+                      placeholder="Enter your phone number"
                       required
                     />
                   </div>
@@ -223,7 +254,7 @@ const Donations = () => {
                 <Button 
                   type="submit" 
                   className="w-full temple-gradient text-white text-lg py-6"
-                  disabled={!donationData.amount || (donationData.amount === 'Other' && !donationData.customAmount) || paymentLoading}
+                  disabled={!user || !donationData.amount || (donationData.amount === 'Other' && !donationData.customAmount) || paymentLoading}
                 >
                   <CreditCard className="w-5 h-5 mr-2" />
                   {paymentLoading ? 'Processing...' : `${t('donate_now')} - ₹${donationData.amount === 'Other' ? donationData.customAmount || '0' : donationData.amount || '0'}`}
@@ -272,6 +303,7 @@ const Donations = () => {
                   <li>✓ Tax-exempt donation receipt</li>
                   <li>✓ 80G tax benefit available</li>
                   <li>✓ Transparent fund utilization</li>
+                  <li>✓ Authentication required for all donations</li>
                 </ul>
               </CardContent>
             </Card>
