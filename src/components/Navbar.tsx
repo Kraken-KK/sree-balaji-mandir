@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,17 @@ import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
-  const { user, signOut } = useAuth();
+  
+  // Add error boundary for auth context
+  let authContext;
+  try {
+    authContext = useAuth();
+  } catch (error) {
+    console.log('Auth context not available, using defaults');
+    authContext = { user: null, signOut: () => {} };
+  }
+  
+  const { user, signOut } = authContext;
   const location = useLocation();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -35,7 +46,7 @@ const Navbar = () => {
   ];
 
   const handleAdminAccess = () => {
-    if (adminCode === '123456') {
+    if (adminCode === '551010') {
       setIsAdminDialogOpen(false);
       setAdminCode('');
       navigate('/admin-dashboard');
