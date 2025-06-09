@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,8 +10,8 @@ interface AuthContextType {
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  signInWithPhone: (phone: string) => Promise<void>;
-  verifyOTP: (phone: string, otp: string) => Promise<void>;
+  signInWithOtp: (phone: string) => Promise<void>;
+  verifyOtp: (phone: string, otp: string) => Promise<void>;
   signUp: (email: string, password: string, userData?: any) => Promise<void>;
   signUpWithPhone: (phone: string, userData?: any) => Promise<void>;
   signOut: () => Promise<void>;
@@ -37,12 +36,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
 
-  const ADMIN_CODE = "225255";
+  const ADMIN_CODE = "551010";
 
   useEffect(() => {
     let isMounted = true;
 
-    // Get initial session
     const getSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -66,7 +64,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     getSession();
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
@@ -74,7 +71,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(session);
           setUser(session?.user ?? null);
           if (session?.user) {
-            // Defer admin check to prevent deadlocks
             setTimeout(() => {
               if (isMounted) {
                 checkAdminStatus(session.user);
@@ -149,7 +145,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
-      // Get the current origin, which will be the deployed URL or localhost
       const redirectTo = window.location.origin;
       
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -160,8 +155,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) throw error;
-      
-      // Note: The actual sign-in will happen via redirect, so we don't show success toast here
     } catch (error: any) {
       console.error('Google sign in error:', error);
       toast({
@@ -175,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signInWithPhone = async (phone: string) => {
+  const signInWithOtp = async (phone: string) => {
     try {
       setLoading(true);
       const { data, error } = await supabase.auth.signInWithOtp({
@@ -200,7 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifyOTP = async (phone: string, otp: string) => {
+  const verifyOtp = async (phone: string, otp: string) => {
     try {
       setLoading(true);
       const { data, error } = await supabase.auth.verifyOtp({
@@ -230,7 +223,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, userData?: any) => {
     try {
       setLoading(true);
-      // Get the current origin for email redirect
       const redirectTo = `${window.location.origin}/`;
       
       const { data, error } = await supabase.auth.signUp({
@@ -267,7 +259,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUpWithPhone = async (phone: string, userData?: any) => {
     try {
       setLoading(true);
-      // For phone sign up, we use signInWithOtp which will create a user if they don't exist
       const { data, error } = await supabase.auth.signInWithOtp({
         phone,
         options: {
@@ -352,8 +343,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAdmin,
       signIn,
       signInWithGoogle,
-      signInWithPhone,
-      verifyOTP,
+      signInWithOtp,
+      verifyOtp,
       signUp,
       signUpWithPhone,
       signOut,

@@ -1,31 +1,52 @@
 
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
+import { AdminCodeInput } from '@/components/AdminCodeInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { AdminEventManager } from '@/components/AdminEventManager';
 import { AdminServiceManager } from '@/components/AdminServiceManager';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Users, Settings as SettingsIcon } from 'lucide-react';
+import { 
+  Users, 
+  CreditCard, 
+  Calendar, 
+  TrendingUp, 
+  DollarSign, 
+  Activity,
+  Settings,
+  Image as ImageIcon,
+  Plus,
+  Upload
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const AdminDashboard = () => {
   const { user, isAdmin, checkAdminCode } = useAuth();
   const { toast } = useToast();
-  const [adminCodeInput, setAdminCodeInput] = useState('');
   const [isAdminVerified, setIsAdminVerified] = useState(false);
-  const [showAdminCode, setShowAdminCode] = useState(false);
-  const [registeredUsers, setRegisteredUsers] = useState([]);
-  const [payments, setPayments] = useState([]);
-  const [eventRegistrations, setEventRegistrations] = useState([]);
-  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [adminCodeLoading, setAdminCodeLoading] = useState(false);
+
+  // Data states
+  const [users, setUsers] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [services, setServices] = useState([]);
+  const [registrations, setRegistrations] = useState([]);
+  const [galleryItems, setGalleryItems] = useState([]);
+
+  // Gallery management states
+  const [isGalleryDialogOpen, setIsGalleryDialogOpen] = useState(false);
+  const [newGalleryItem, setNewGalleryItem] = useState({ url: '', type: 'image', title: '' });
 
   useEffect(() => {
     if (isAdmin || isAdminVerified) {
@@ -38,23 +59,19 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       
-      // Fetch all data concurrently
-      const [usersResult, paymentsResult, registrationsResult, servicesResult] = await Promise.all([
+      const [usersRes, paymentsRes, eventsRes, servicesRes, registrationsRes] = await Promise.all([
         supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
         supabase.from('payments').select('*').order('created_at', { ascending: false }),
-        supabase.from('event_registrations').select('*, events(name)').order('created_at', { ascending: false }),
-        supabase.from('services').select('*').order('created_at', { ascending: false })
+        supabase.from('events').select('*').order('created_at', { ascending: false }),
+        supabase.from('services').select('*').order('created_at', { ascending: false }),
+        supabase.from('event_registrations').select('*, events(name)').order('created_at', { ascending: false })
       ]);
 
-      if (usersResult.error) throw usersResult.error;
-      if (paymentsResult.error) throw paymentsResult.error;
-      if (registrationsResult.error) throw registrationsResult.error;
-      if (servicesResult.error) throw servicesResult.error;
-
-      setRegisteredUsers(usersResult.data || []);
-      setPayments(paymentsResult.data || []);
-      setEventRegistrations(registrationsResult.data || []);
-      setServices(servicesResult.data || []);
+      setUsers(usersRes.data || []);
+      setPayments(paymentsRes.data || []);
+      setEvents(eventsRes.data || []);
+      setServices(servicesRes.data || []);
+      setRegistrations(registrationsRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -68,159 +85,65 @@ const AdminDashboard = () => {
   };
 
   const setupRealtimeSubscriptions = () => {
-    // Subscribe to payments table changes
-    const paymentsChannel = supabase
-      .channel('payments-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, (payload) => {
-        console.log('Payments change received:', payload);
-        fetchAllData(); // Refresh all data when payments change
-      })
-      .subscribe();
+    const channels = [
+      supabase.channel('users-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'user_profiles' }, fetchAllData),
+      supabase.channel('payments-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, fetchAllData),
+      supabase.channel('events-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, fetchAllData),
+      supabase.channel('services-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, fetchAllData),
+      supabase.channel('registrations-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'event_registrations' }, fetchAllData)
+    ];
 
-    // Subscribe to user profiles changes
-    const usersChannel = supabase
-      .channel('users-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_profiles' }, () => {
-        fetchAllData();
-      })
-      .subscribe();
+    channels.forEach(channel => channel.subscribe());
 
-    // Subscribe to services changes
-    const servicesChannel = supabase
-      .channel('services-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, () => {
-        fetchAllData();
-      })
-      .subscribe();
-
-    // Subscribe to event registrations changes
-    const registrationsChannel = supabase
-      .channel('registrations-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_registrations' }, () => {
-        fetchAllData();
-      })
-      .subscribe();
-
-    // Cleanup subscriptions on unmount
-    return () => {
-      supabase.removeChannel(paymentsChannel);
-      supabase.removeChannel(usersChannel);
-      supabase.removeChannel(servicesChannel);
-      supabase.removeChannel(registrationsChannel);
-    };
+    return () => channels.forEach(channel => supabase.removeChannel(channel));
   };
 
-  // Calculate real statistics
-  const totalDonations = payments
-    .filter(p => p.type === 'donation' && p.status === 'completed')
-    .reduce((sum, p) => sum + Number(p.amount), 0);
-
-  const totalServices = payments
-    .filter(p => p.type === 'service' && p.status === 'completed')
-    .reduce((sum, p) => sum + Number(p.amount), 0);
-
-  const statsData = [
-    { title: 'Total Registered Users', value: registeredUsers.length.toString(), change: '+12%' },
-    { title: 'Event Registrations', value: eventRegistrations.length.toString(), change: '+8%' },
-    { title: 'Donations Received', value: `₹${totalDonations.toLocaleString()}`, change: '+15%' },
-    { title: 'Active Services', value: services.length.toString(), change: '0%' },
-  ];
-
-  // Generate real chart data
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - i));
-    return date.toISOString().split('T')[0];
-  });
-
-  const visitorsData = last7Days.map((date, index) => ({
-    date: String(index + 1).padStart(2, '0'),
-    count: payments.filter(p => p.created_at?.startsWith(date)).length * 10 + Math.floor(Math.random() * 100) + 300
-  }));
-
-  const registrationsData = eventRegistrations
-    .reduce((acc: any[], reg: any) => {
-      const eventName = reg.events?.name || 'Unknown Event';
-      const existing = acc.find(item => item.event === eventName);
-      if (existing) {
-        existing.count += reg.member_count;
+  const handleAdminCodeSubmit = (code: string) => {
+    setAdminCodeLoading(true);
+    setTimeout(() => {
+      if (checkAdminCode(code)) {
+        setIsAdminVerified(true);
+        toast({
+          title: "Admin Access Granted",
+          description: "Welcome to the admin dashboard!",
+        });
       } else {
-        acc.push({ event: eventName, count: reg.member_count });
+        toast({
+          title: "Invalid Admin Code",
+          description: "Please enter the correct admin code.",
+          variant: "destructive",
+        });
       }
-      return acc;
-    }, [])
-    .slice(0, 4);
+      setAdminCodeLoading(false);
+    }, 1000);
+  };
 
-  const donationsData = [
-    { type: 'General Fund', amount: totalDonations * 0.4, color: '#E0B020' },
-    { type: 'Annadanam', amount: totalDonations * 0.3, color: '#EC4899' },
-    { type: 'Maintenance', amount: totalDonations * 0.2, color: '#3B82F6' },
-    { type: 'Festivals', amount: totalDonations * 0.1, color: '#10B981' },
-  ];
-
-  const handleAdminCodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (checkAdminCode(adminCodeInput)) {
-      setIsAdminVerified(true);
+  const addGalleryItem = () => {
+    if (!newGalleryItem.url || !newGalleryItem.title) {
       toast({
-        title: "Admin Access Granted",
-        description: "Welcome to the admin dashboard!",
-      });
-    } else {
-      toast({
-        title: "Invalid Admin Code",
-        description: "Please enter the correct admin code.",
+        title: "Missing Information",
+        description: "Please provide both URL and title.",
         variant: "destructive",
       });
+      return;
     }
-    setAdminCodeInput('');
+
+    setGalleryItems(prev => [...prev, { ...newGalleryItem, id: Date.now() }]);
+    setNewGalleryItem({ url: '', type: 'image', title: '' });
+    setIsGalleryDialogOpen(false);
+    
+    toast({
+      title: "Gallery Updated",
+      description: "New item added to gallery successfully.",
+    });
   };
 
-  // Show admin code verification if not verified and not already admin
   if (!isAdmin && !isAdminVerified) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
         <Navbar />
-        <div className="container mx-auto px-4 py-12">
-          <div className="max-w-md mx-auto">
-            <Card className="animate-fade-in">
-              <CardHeader>
-                <CardTitle className="text-center">Admin Access Required</CardTitle>
-                <CardDescription className="text-center">
-                  Please enter the admin code to access the dashboard
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleAdminCodeSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="adminCode">Admin Code</Label>
-                    <div className="relative">
-                      <Input
-                        id="adminCode"
-                        type={showAdminCode ? "text" : "password"}
-                        value={adminCodeInput}
-                        onChange={(e) => setAdminCodeInput(e.target.value)}
-                        placeholder="Enter admin code"
-                        required
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => setShowAdminCode(!showAdminCode)}
-                      >
-                        {showAdminCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                  <Button type="submit" className="w-full">
-                    Access Dashboard
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
+        <div className="container mx-auto px-4 py-16">
+          <AdminCodeInput onSubmit={handleAdminCodeSubmit} loading={adminCodeLoading} />
         </div>
       </div>
     );
@@ -228,42 +151,107 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
         <Navbar />
-        <div className="container mx-auto px-4 py-12">
-          <div className="text-center">Loading dashboard data...</div>
+        <div className="container mx-auto px-4 py-16">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+            <p className="mt-4 text-lg">Loading dashboard data...</p>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Calculate statistics
+  const totalDonations = payments.filter(p => p.type === 'donation' && p.status === 'completed').reduce((sum, p) => sum + Number(p.amount), 0);
+  const totalServices = payments.filter(p => p.type === 'service' && p.status === 'completed').reduce((sum, p) => sum + Number(p.amount), 0);
+  const totalRevenue = totalDonations + totalServices;
+  const completedPayments = payments.filter(p => p.status === 'completed').length;
+
+  // Chart data
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - i));
+    return date.toISOString().split('T')[0];
+  });
+
+  const dailyStats = last7Days.map(date => {
+    const dayPayments = payments.filter(p => p.created_at?.startsWith(date));
+    const dayRegistrations = registrations.filter(r => r.created_at?.startsWith(date));
+    return {
+      date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+      payments: dayPayments.length,
+      registrations: dayRegistrations.length,
+      revenue: dayPayments.reduce((sum, p) => sum + Number(p.amount), 0)
+    };
+  });
+
+  const revenueData = [
+    { name: 'Donations', value: totalDonations, color: '#E0B020' },
+    { name: 'Services', value: totalServices, color: '#EC4899' }
+  ];
+
+  const statsCards = [
+    {
+      title: 'Total Users',
+      value: users.length.toString(),
+      change: '+12%',
+      icon: Users,
+      color: 'text-blue-600'
+    },
+    {
+      title: 'Total Revenue',
+      value: `₹${totalRevenue.toLocaleString()}`,
+      change: '+15%',
+      icon: DollarSign,
+      color: 'text-green-600'
+    },
+    {
+      title: 'Event Registrations',
+      value: registrations.length.toString(),
+      change: '+8%',
+      icon: Calendar,
+      color: 'text-purple-600'
+    },
+    {
+      title: 'Active Services',
+      value: services.length.toString(),
+      change: '0%',
+      icon: Settings,
+      color: 'text-orange-600'
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-12">
-        <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">
-            Monitor temple activities, registrations, donations, and manage events & services
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            Admin Dashboard
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Comprehensive temple management and analytics
           </p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {statsData.map((stat, index) => (
-            <Card key={index} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+          {statsCards.map((stat, index) => (
+            <Card key={index} className="relative overflow-hidden hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">{stat.title}</p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
+                    <p className="text-3xl font-bold">{stat.value}</p>
+                    <p className="text-xs text-green-600 mt-1">{stat.change} from last month</p>
                   </div>
-                  <span className={`text-sm px-2 py-1 rounded ${
-                    stat.change.startsWith('+') ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                  }`}>
-                    {stat.change}
-                  </span>
+                  <div className={`p-3 rounded-full bg-muted/50 ${stat.color}`}>
+                    <stat.icon className="w-6 h-6" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -272,95 +260,67 @@ const AdminDashboard = () => {
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card className="animate-slide-up" style={{ animationDelay: '0.4s' }}>
+          <Card className="col-span-1">
             <CardHeader>
-              <CardTitle>Activity Trend (Last 7 Days)</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5" />
+                Activity Trends
+              </CardTitle>
+              <CardDescription>Daily payments and registrations</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={visitorsData}>
+                <AreaChart data={dailyStats}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
                   <Tooltip />
-                  <Line type="monotone" dataKey="count" stroke="#E0B020" strokeWidth={2} />
-                </LineChart>
+                  <Area type="monotone" dataKey="payments" stackId="1" stroke="#E0B020" fill="#E0B020" fillOpacity={0.6} />
+                  <Area type="monotone" dataKey="registrations" stackId="1" stroke="#EC4899" fill="#EC4899" fillOpacity={0.6} />
+                </AreaChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          <Card className="animate-slide-up" style={{ animationDelay: '0.5s' }}>
+          <Card className="col-span-1">
             <CardHeader>
-              <CardTitle>Event Registrations</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={registrationsData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="event" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#EC4899" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="animate-slide-up" style={{ animationDelay: '0.6s' }}>
-            <CardHeader>
-              <CardTitle>Donations Breakdown</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5" />
+                Revenue Distribution
+              </CardTitle>
+              <CardDescription>Breakdown by source</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={donationsData}
+                    data={revenueData}
                     cx="50%"
                     cy="50%"
-                    outerRadius={80}
-                    dataKey="amount"
-                    label={({ type, amount }) => `${type}: ₹${Math.round(amount).toLocaleString()}`}
+                    outerRadius={100}
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ₹${value.toLocaleString()}`}
                   >
-                    {donationsData.map((entry, index) => (
+                    {revenueData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => `₹${Math.round(value).toLocaleString()}`} />
+                  <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
-
-          <Card className="animate-slide-up" style={{ animationDelay: '0.7s' }}>
-            <CardHeader>
-              <CardTitle>Real-Time Stats</CardTitle>
-              <CardDescription>Live updates enabled</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/20 rounded">
-                <span className="text-sm">Total Payments</span>
-                <span className="font-semibold">{payments.length}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded">
-                <span className="text-sm">Completed Payments</span>
-                <span className="font-semibold">{payments.filter(p => p.status === 'completed').length}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-orange-50 dark:bg-orange-950/20 rounded">
-                <span className="text-sm">Total Revenue</span>
-                <span className="font-semibold">₹{(totalDonations + totalServices).toLocaleString()}</span>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Enhanced Data Tables */}
-        <Tabs defaultValue="users" className="w-full animate-slide-up" style={{ animationDelay: '0.8s' }}>
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="users">Users ({registeredUsers.length})</TabsTrigger>
+        {/* Data Tables */}
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="users">Users ({users.length})</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
-            <TabsTrigger value="services">Services ({services.length})</TabsTrigger>
-            <TabsTrigger value="registrations">Registrations ({eventRegistrations.length})</TabsTrigger>
+            <TabsTrigger value="services">Services</TabsTrigger>
             <TabsTrigger value="payments">Payments ({payments.length})</TabsTrigger>
+            <TabsTrigger value="registrations">Registrations</TabsTrigger>
+            <TabsTrigger value="gallery">Gallery</TabsTrigger>
           </TabsList>
 
           <TabsContent value="users">
@@ -368,33 +328,35 @@ const AdminDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="w-5 h-5" />
-                  Registered Users ({registeredUsers.length})
+                  Registered Users
                 </CardTitle>
-                <CardDescription>Live data from user registrations</CardDescription>
+                <CardDescription>All registered temple community members</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Full Name</TableHead>
-                      <TableHead>Username</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Joined Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {registeredUsers.map((user: any) => (
-                      <TableRow key={user.id}>
-                        <TableCell>{user.full_name || 'N/A'}</TableCell>
-                        <TableCell>{user.username || 'N/A'}</TableCell>
-                        <TableCell>{user.phone || 'N/A'}</TableCell>
-                        <TableCell>{user.location || 'N/A'}</TableCell>
-                        <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Username</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Joined</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {users.slice(0, 10).map((user: any) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.full_name || 'N/A'}</TableCell>
+                          <TableCell>{user.username || 'N/A'}</TableCell>
+                          <TableCell>{user.phone || 'N/A'}</TableCell>
+                          <TableCell>{user.location || 'N/A'}</TableCell>
+                          <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -402,11 +364,8 @@ const AdminDashboard = () => {
           <TabsContent value="events">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <SettingsIcon className="w-5 h-5" />
-                  Event Management
-                </CardTitle>
-                <CardDescription>Create, edit, and manage temple events</CardDescription>
+                <CardTitle>Event Management</CardTitle>
+                <CardDescription>Create and manage temple events</CardDescription>
               </CardHeader>
               <CardContent>
                 <AdminEventManager />
@@ -417,11 +376,8 @@ const AdminDashboard = () => {
           <TabsContent value="services">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <SettingsIcon className="w-5 h-5" />
-                  Service Management
-                </CardTitle>
-                <CardDescription>Create, edit, and manage temple services</CardDescription>
+                <CardTitle>Service Management</CardTitle>
+                <CardDescription>Create and manage temple services</CardDescription>
               </CardHeader>
               <CardContent>
                 <AdminServiceManager />
@@ -429,72 +385,169 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="registrations">
+          <TabsContent value="payments">
             <Card>
               <CardHeader>
-                <CardTitle>Event Registrations</CardTitle>
-                <CardDescription>Real-time event registrations from devotees</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5" />
+                  Payment History
+                </CardTitle>
+                <CardDescription>Real-time payment transactions</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Event</TableHead>
-                      <TableHead>Members</TableHead>
-                      <TableHead>Registration Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {eventRegistrations.slice(0, 10).map((registration: any) => (
-                      <TableRow key={registration.id}>
-                        <TableCell>{registration.events?.name || 'Unknown Event'}</TableCell>
-                        <TableCell>{registration.member_count}</TableCell>
-                        <TableCell>{new Date(registration.created_at).toLocaleString()}</TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {payments.slice(0, 10).map((payment: any) => (
+                        <TableRow key={payment.id}>
+                          <TableCell className="font-medium">{payment.customer_name || 'Anonymous'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{payment.type}</Badge>
+                          </TableCell>
+                          <TableCell>₹{Number(payment.amount).toLocaleString()}</TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              payment.status === 'completed' ? 'default' :
+                              payment.status === 'pending' ? 'secondary' : 'destructive'
+                            }>
+                              {payment.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(payment.created_at).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="payments">
+          <TabsContent value="registrations">
             <Card>
               <CardHeader>
-                <CardTitle>Payments & Donations</CardTitle>
-                <CardDescription>Real-time payments and donations received</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Event Registrations
+                </CardTitle>
+                <CardDescription>Live event registration data</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {payments.slice(0, 10).map((payment: any) => (
-                      <TableRow key={payment.id}>
-                        <TableCell>{payment.customer_name || 'Anonymous'}</TableCell>
-                        <TableCell className="capitalize">{payment.type}</TableCell>
-                        <TableCell>₹{Number(payment.amount).toLocaleString()}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            payment.status === 'completed' ? 'bg-green-100 text-green-700' :
-                            payment.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-red-100 text-red-700'
-                          }`}>
-                            {payment.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{new Date(payment.created_at).toLocaleDateString()}</TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Event</TableHead>
+                        <TableHead>Members</TableHead>
+                        <TableHead>Date</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {registrations.slice(0, 10).map((reg: any) => (
+                        <TableRow key={reg.id}>
+                          <TableCell className="font-medium">{reg.events?.name || 'Unknown Event'}</TableCell>
+                          <TableCell>{reg.member_count}</TableCell>
+                          <TableCell>{new Date(reg.created_at).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="gallery">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5" />
+                  Gallery Management
+                </CardTitle>
+                <CardDescription>Manage temple gallery images and videos</CardDescription>
+                <Dialog open={isGalleryDialogOpen} onOpenChange={setIsGalleryDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Media
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Gallery Item</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="mediaUrl">Media URL</Label>
+                        <Input
+                          id="mediaUrl"
+                          placeholder="Enter image or video URL"
+                          value={newGalleryItem.url}
+                          onChange={(e) => setNewGalleryItem({ ...newGalleryItem, url: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="mediaTitle">Title</Label>
+                        <Input
+                          id="mediaTitle"
+                          placeholder="Enter media title"
+                          value={newGalleryItem.title}
+                          onChange={(e) => setNewGalleryItem({ ...newGalleryItem, title: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="mediaType">Type</Label>
+                        <select
+                          id="mediaType"
+                          className="w-full p-2 border rounded"
+                          value={newGalleryItem.type}
+                          onChange={(e) => setNewGalleryItem({ ...newGalleryItem, type: e.target.value })}
+                        >
+                          <option value="image">Image</option>
+                          <option value="video">Video</option>
+                        </select>
+                      </div>
+                      <Button onClick={addGalleryItem} className="w-full">
+                        Add to Gallery
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {galleryItems.map((item: any) => (
+                    <Card key={item.id} className="overflow-hidden">
+                      <div className="aspect-video bg-muted flex items-center justify-center">
+                        {item.type === 'image' ? (
+                          <img src={item.url} alt={item.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <video src={item.url} className="w-full h-full object-cover" controls />
+                        )}
+                      </div>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold">{item.title}</h3>
+                        <Badge variant="outline" className="mt-2">
+                          {item.type}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {galleryItems.length === 0 && (
+                    <div className="col-span-full text-center py-8 text-muted-foreground">
+                      No gallery items yet. Click "Add Media" to get started.
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
