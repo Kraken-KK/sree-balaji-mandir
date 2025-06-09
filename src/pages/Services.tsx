@@ -4,47 +4,48 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Tables } from '@/integrations/supabase/types';
-import { CreditCard, LogIn } from 'lucide-react';
+import { CreditCard, Clock, Tag, LogIn } from 'lucide-react';
 
 const Services = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [bookingData, setBookingData] = useState({
-    name: '',
-    mobile: '',
-    quantity: 1,
-    service: '',
-  });
-  const [services, setServices] = useState<Tables<'services'>[]>([]);
+  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchServices = async () => {
-      setLoading(true);
-      const { data, error } = await supabase.from('services').select('*').order('name', { ascending: true });
-      if (error) {
-        toast({ title: 'Error', description: 'Failed to fetch services.' });
-      } else {
-        setServices(data || []);
-      }
-      setLoading(false);
-    };
     fetchServices();
-  }, [toast]);
+  }, []);
 
-  const handlePayment = async (service: Tables<'services'>) => {
+  const fetchServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch services.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBookService = async (service: any) => {
     if (!user) {
       toast({
         title: 'Authentication Required',
@@ -55,26 +56,15 @@ const Services = () => {
       return;
     }
 
-    if (!bookingData.name || !bookingData.mobile) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please fill in all required fields.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    setPaymentLoading(true);
+    setPaymentLoading(service.id);
     try {
-      const totalAmount = (service.price || 0) * bookingData.quantity;
-      
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
-          amount: totalAmount,
+          amount: Number(service.price),
           currency: 'inr',
           description: service.name,
           customerEmail: user.email,
-          customerName: bookingData.name,
+          customerName: user.user_metadata?.full_name || 'User',
           type: 'service'
         }
       });
@@ -88,8 +78,6 @@ const Services = () => {
         title: 'Redirecting to Payment',
         description: 'Please complete your payment in the new window.',
       });
-      
-      setBookingData({ name: '', mobile: '', quantity: 1, service: '' });
     } catch (error) {
       console.error('Payment error:', error);
       toast({
@@ -98,9 +86,20 @@ const Services = () => {
         variant: 'destructive'
       });
     } finally {
-      setPaymentLoading(false);
+      setPaymentLoading(null);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-12">
+          <div className="text-center">Loading services...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -109,9 +108,9 @@ const Services = () => {
       <div className="container mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Services</h1>
+          <h1 className="text-4xl font-bold mb-4">{t('services_title')}</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Explore our various spiritual services and book them for your special occasions
+            {t('services_subtitle')}
           </p>
           {!user && (
             <Card className="mt-6 max-w-md mx-auto">
@@ -119,7 +118,7 @@ const Services = () => {
                 <LogIn className="w-12 h-12 mx-auto mb-4 text-primary" />
                 <h3 className="font-semibold mb-2">Sign In Required</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Please sign in to book our services and make payments
+                  Please sign in to book services and receive confirmations
                 </p>
                 <Button onClick={() => navigate('/auth')} className="temple-gradient text-white">
                   Sign In Now
@@ -129,134 +128,82 @@ const Services = () => {
           )}
         </div>
 
-        {/* Services Accordion */}
-        <div className="max-w-4xl mx-auto">
-          {loading ? (
-            <div className="text-center py-12">Loading services...</div>
-          ) : (
-            <Accordion type="single" collapsible className="space-y-4">
-              {services.map((service) => (
-                <AccordionItem key={service.id} value={`service-${service.id}`} className="border rounded-lg px-6">
-                  <AccordionTrigger className="text-left hover:no-underline">
-                    <div className="flex justify-between items-center w-full mr-4">
-                      <h3 className="text-lg font-semibold">{service.name}</h3>
-                      <span className="text-primary font-medium">₹{service.price}</span>
+        {/* Services Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {services.map((service: any) => (
+            <Card key={service.id} className="hover:shadow-lg transition-shadow hover-lift">
+              <CardHeader>
+                <div className="flex justify-between items-start mb-2">
+                  <CardTitle className="text-xl">{service.name}</CardTitle>
+                  <Badge variant="secondary" className="text-lg font-bold">
+                    ₹{Number(service.price).toLocaleString()}
+                  </Badge>
+                </div>
+                <CardDescription className="text-base">{service.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  {service.duration && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      <span>{service.duration}</span>
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pt-4 pb-6">
-                    <div className="space-y-4">
-                      <p className="text-muted-foreground">{service.description}</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Duration: {service.duration}
-                        </span>
-                        {user ? (
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button 
-                                className="temple-gradient text-white hover:opacity-90"
-                                onClick={() => setBookingData({ ...bookingData, service: service.name })}
-                              >
-                                {t('book_ticket')}
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="bg-white">
-                              <DialogHeader>
-                                <DialogTitle>Book {service.name}</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div>
-                                  <Label htmlFor="name">{t('label_name')}</Label>
-                                  <Input
-                                    id="name"
-                                    type="text"
-                                    value={bookingData.name}
-                                    onChange={(e) => setBookingData({ ...bookingData, name: e.target.value })}
-                                    placeholder="Enter full name"
-                                    required
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor="mobile">{t('label_mobile')}</Label>
-                                  <Input
-                                    id="mobile"
-                                    type="tel"
-                                    value={bookingData.mobile}
-                                    onChange={(e) => setBookingData({ ...bookingData, mobile: e.target.value })}
-                                    placeholder="Enter mobile number"
-                                    required
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor="quantity">{t('label_tickets')}</Label>
-                                  <Input
-                                    id="quantity"
-                                    type="number"
-                                    min="1"
-                                    value={bookingData.quantity}
-                                    onChange={(e) => setBookingData({ ...bookingData, quantity: parseInt(e.target.value) })}
-                                    required
-                                  />
-                                </div>
-                                
-                                <div className="pt-4 border-t">
-                                  <div className="flex justify-between items-center mb-4">
-                                    <span className="text-lg font-medium">Total Amount:</span>
-                                    <span className="text-xl font-bold text-primary">
-                                      ₹{((service.price || 0) * bookingData.quantity).toFixed(2)}
-                                    </span>
-                                  </div>
-                                  
-                                  <Button 
-                                    onClick={() => handlePayment(service)} 
-                                    className="w-full temple-gradient text-white"
-                                    disabled={paymentLoading}
-                                  >
-                                    <CreditCard className="w-4 h-4 mr-2" />
-                                    {paymentLoading ? 'Processing...' : 'Pay with Stripe'}
-                                  </Button>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        ) : (
-                          <Button 
-                            onClick={() => navigate('/auth')} 
-                            variant="outline"
-                            className="border-primary text-primary hover:bg-primary hover:text-white"
-                          >
-                            <LogIn className="w-4 h-4 mr-2" />
-                            Sign In to Book
-                          </Button>
-                        )}
-                      </div>
+                  )}
+                  {service.category && (
+                    <div className="flex items-center gap-1">
+                      <Tag className="w-4 h-4" />
+                      <span>{service.category}</span>
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          )}
+                  )}
+                </div>
+                
+                <Button 
+                  onClick={() => handleBookService(service)}
+                  className="w-full temple-gradient text-white text-lg py-6"
+                  disabled={!user || paymentLoading === service.id}
+                >
+                  <CreditCard className="w-5 h-5 mr-2" />
+                  {paymentLoading === service.id ? 'Processing...' : `Book Service - ₹${Number(service.price).toLocaleString()}`}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* Additional Information */}
-        <div className="mt-16 max-w-4xl mx-auto">
+        {services.length === 0 && (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-semibold mb-2">No Services Available</h3>
+            <p className="text-muted-foreground">
+              Services are being updated. Please check back later.
+            </p>
+          </div>
+        )}
+
+        {/* Information Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
           <Card>
             <CardHeader>
-              <CardTitle>Important Information</CardTitle>
-              <CardDescription>
-                Please read the following guidelines before booking our services
-              </CardDescription>
+              <CardTitle>Booking Information</CardTitle>
             </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-muted-foreground">
-                <li>• All bookings must be made at least 24 hours in advance</li>
-                <li>• Please arrive 15 minutes before your scheduled time</li>
-                <li>• Dress code: Traditional or modest clothing required</li>
-                <li>• For cancellations, please contact us at least 12 hours before</li>
-                <li>• Photography and videography require special permission</li>
-                <li>• Mobile phones should be kept in silent mode during ceremonies</li>
-                <li>• Authentication is required for all service bookings</li>
-              </ul>
+            <CardContent className="space-y-2 text-sm">
+              <p>✓ Secure online payment</p>
+              <p>✓ Instant booking confirmation</p>
+              <p>✓ Email and SMS notifications</p>
+              <p>✓ Digital receipt generation</p>
+              <p>✓ Customer support available</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Security</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <p>✓ Stripe secure payment gateway</p>
+              <p>✓ 256-bit SSL encryption</p>
+              <p>✓ PCI DSS compliant</p>
+              <p>✓ Multiple payment methods</p>
+              <p>✓ Refund protection policy</p>
             </CardContent>
           </Card>
         </div>

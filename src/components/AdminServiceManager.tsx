@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 
 interface Service {
@@ -20,25 +21,8 @@ interface Service {
 
 export const AdminServiceManager = () => {
   const { toast } = useToast();
-  const [services, setServices] = useState<Service[]>([
-    {
-      id: '1',
-      name: 'Special Puja',
-      price: 5000,
-      duration: '2 hours',
-      description: 'Personalized puja service',
-      category: 'Puja Services',
-    },
-    {
-      id: '2',
-      name: 'Annadanam',
-      price: 100,
-      duration: '1 hour',
-      description: 'Food offering service',
-      category: 'Donation Services',
-    }
-  ]);
-  
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [serviceForm, setServiceForm] = useState({
@@ -49,32 +33,70 @@ export const AdminServiceManager = () => {
     category: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  const fetchServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch services.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (editingService) {
-      setServices(services.map(service => 
-        service.id === editingService.id 
-          ? { ...service, ...serviceForm }
-          : service
-      ));
+    try {
+      if (editingService) {
+        const { error } = await supabase
+          .from('services')
+          .update(serviceForm)
+          .eq('id', editingService.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Service updated",
+          description: "Service has been updated successfully.",
+        });
+      } else {
+        const { error } = await supabase
+          .from('services')
+          .insert([serviceForm]);
+
+        if (error) throw error;
+
+        toast({
+          title: "Service created",
+          description: "New service has been created successfully.",
+        });
+      }
+      
+      fetchServices();
+      resetForm();
+    } catch (error) {
+      console.error('Error saving service:', error);
       toast({
-        title: "Service updated",
-        description: "Service has been updated successfully.",
-      });
-    } else {
-      const newService: Service = {
-        id: Date.now().toString(),
-        ...serviceForm,
-      };
-      setServices([...services, newService]);
-      toast({
-        title: "Service created",
-        description: "New service has been created successfully.",
+        title: "Error",
+        description: "Failed to save service.",
+        variant: "destructive",
       });
     }
-    
-    resetForm();
   };
 
   const resetForm = () => {
@@ -91,17 +113,44 @@ export const AdminServiceManager = () => {
 
   const handleEdit = (service: Service) => {
     setEditingService(service);
-    setServiceForm(service);
+    setServiceForm({
+      name: service.name,
+      price: service.price,
+      duration: service.duration || '',
+      description: service.description || '',
+      category: service.category || '',
+    });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (serviceId: string) => {
-    setServices(services.filter(service => service.id !== serviceId));
-    toast({
-      title: "Service deleted",
-      description: "Service has been deleted successfully.",
-    });
+  const handleDelete = async (serviceId: string) => {
+    try {
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', serviceId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Service deleted",
+        description: "Service has been deleted successfully.",
+      });
+      
+      fetchServices();
+    } catch (error) {
+      console.error('Error deleting service:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete service.",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (loading) {
+    return <div className="text-center py-8">Loading services...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -137,7 +186,7 @@ export const AdminServiceManager = () => {
                     id="price"
                     type="number"
                     value={serviceForm.price}
-                    onChange={(e) => setServiceForm({ ...serviceForm, price: parseInt(e.target.value) })}
+                    onChange={(e) => setServiceForm({ ...serviceForm, price: parseInt(e.target.value) || 0 })}
                     required
                   />
                 </div>
@@ -209,6 +258,11 @@ export const AdminServiceManager = () => {
             </CardContent>
           </Card>
         ))}
+        {services.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            No services created yet. Click "Add Service" to get started.
+          </div>
+        )}
       </div>
     </div>
   );
