@@ -77,42 +77,6 @@ export type Database = {
         }
         Relationships: []
       }
-      gallery: {
-        Row: {
-          category: string | null
-          created_at: string
-          description: string | null
-          id: string
-          image_url: string
-          is_featured: boolean | null
-          title: string
-          updated_at: string
-          uploaded_by: string | null
-        }
-        Insert: {
-          category?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          image_url: string
-          is_featured?: boolean | null
-          title: string
-          updated_at?: string
-          uploaded_by?: string | null
-        }
-        Update: {
-          category?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          image_url?: string
-          is_featured?: boolean | null
-          title?: string
-          updated_at?: string
-          uploaded_by?: string | null
-        }
-        Relationships: []
-      }
       payments: {
         Row: {
           amount: number
@@ -191,69 +155,6 @@ export type Database = {
         }
         Relationships: []
       }
-      tickets: {
-        Row: {
-          booking_date: string
-          created_at: string
-          customer_email: string
-          customer_name: string
-          id: string
-          payment_id: string | null
-          qr_code: string
-          service_date: string | null
-          service_id: string
-          status: string
-          ticket_number: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          booking_date?: string
-          created_at?: string
-          customer_email: string
-          customer_name: string
-          id?: string
-          payment_id?: string | null
-          qr_code: string
-          service_date?: string | null
-          service_id: string
-          status?: string
-          ticket_number: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          booking_date?: string
-          created_at?: string
-          customer_email?: string
-          customer_name?: string
-          id?: string
-          payment_id?: string | null
-          qr_code?: string
-          service_date?: string | null
-          service_id?: string
-          status?: string
-          ticket_number?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tickets_payment_id_fkey"
-            columns: ["payment_id"]
-            isOneToOne: false
-            referencedRelation: "payments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tickets_service_id_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_api_keys: {
         Row: {
           api_key: string
@@ -265,33 +166,6 @@ export type Database = {
         }
         Update: {
           api_key?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_onboarding: {
-        Row: {
-          completed: boolean | null
-          completed_at: string | null
-          created_at: string
-          current_step: number | null
-          id: string
-          user_id: string
-        }
-        Insert: {
-          completed?: boolean | null
-          completed_at?: string | null
-          created_at?: string
-          current_step?: number | null
-          id?: string
-          user_id: string
-        }
-        Update: {
-          completed?: boolean | null
-          completed_at?: string | null
-          created_at?: string
-          current_step?: number | null
-          id?: string
           user_id?: string
         }
         Relationships: []
@@ -370,10 +244,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      generate_ticket_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
