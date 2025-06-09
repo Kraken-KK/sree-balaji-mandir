@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { OnboardingFlow } from "@/components/OnboardingFlow";
 import Index from "./pages/Index";
 import Gallery from "./pages/Gallery";
 import Events from "./pages/Events";
@@ -31,6 +32,7 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
+            <OnboardingFlow />
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
