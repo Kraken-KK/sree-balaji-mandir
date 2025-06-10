@@ -314,13 +314,12 @@ const AdminDashboard = () => {
 
         {/* Data Tables */}
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="users">Users ({users.length})</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
             <TabsTrigger value="services">Services</TabsTrigger>
             <TabsTrigger value="payments">Payments ({payments.length})</TabsTrigger>
             <TabsTrigger value="registrations">Registrations</TabsTrigger>
-            <TabsTrigger value="gallery">Gallery</TabsTrigger>
           </TabsList>
 
           <TabsContent value="users">
@@ -461,92 +460,6 @@ const AdminDashboard = () => {
                       ))}
                     </TableBody>
                   </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="gallery">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5" />
-                  Gallery Management
-                </CardTitle>
-                <CardDescription>Manage temple gallery images and videos</CardDescription>
-                <Dialog open={isGalleryDialogOpen} onOpenChange={setIsGalleryDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Media
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add New Gallery Item</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="mediaUrl">Media URL</Label>
-                        <Input
-                          id="mediaUrl"
-                          placeholder="Enter image or video URL"
-                          value={newGalleryItem.url}
-                          onChange={(e) => setNewGalleryItem({ ...newGalleryItem, url: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="mediaTitle">Title</Label>
-                        <Input
-                          id="mediaTitle"
-                          placeholder="Enter media title"
-                          value={newGalleryItem.title}
-                          onChange={(e) => setNewGalleryItem({ ...newGalleryItem, title: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="mediaType">Type</Label>
-                        <select
-                          id="mediaType"
-                          className="w-full p-2 border rounded"
-                          value={newGalleryItem.type}
-                          onChange={(e) => setNewGalleryItem({ ...newGalleryItem, type: e.target.value })}
-                        >
-                          <option value="image">Image</option>
-                          <option value="video">Video</option>
-                        </select>
-                      </div>
-                      <Button onClick={addGalleryItem} className="w-full">
-                        Add to Gallery
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {galleryItems.map((item: any) => (
-                    <Card key={item.id} className="overflow-hidden">
-                      <div className="aspect-video bg-muted flex items-center justify-center">
-                        {item.type === 'image' ? (
-                          <img src={item.url} alt={item.title} className="w-full h-full object-cover" />
-                        ) : (
-                          <video src={item.url} className="w-full h-full object-cover" controls />
-                        )}
-                      </div>
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold">{item.title}</h3>
-                        <Badge variant="outline" className="mt-2">
-                          {item.type}
-                        </Badge>
-                      </CardContent>
-                    </Card>
-                  ))}
-                  {galleryItems.length === 0 && (
-                    <div className="col-span-full text-center py-8 text-muted-foreground">
-                      No gallery items yet. Click "Add Media" to get started.
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
