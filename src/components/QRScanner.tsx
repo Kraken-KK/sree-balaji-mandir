@@ -89,29 +89,43 @@ const QRScanner: React.FC = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
+      console.log('Marking ticket as used:', scannedTicket.id);
+      
+      const { data, error } = await supabase
         .from('tickets')
         .update({ 
           status: 'used',
           updated_at: new Date().toISOString()
         })
-        .eq('id', scannedTicket.id);
+        .eq('id', scannedTicket.id)
+        .select();
 
-      if (error) throw error;
+      console.log('Update result:', { data, error });
+
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
 
       toast({
         title: "Ticket Processed",
         description: `Ticket ${scannedTicket.ticket_number} has been marked as used.`,
       });
 
-      setScannedTicket(null);
-      setIsScanning(false);
+      // Update the local state to reflect the change
+      setScannedTicket({ ...scannedTicket, status: 'used' });
+      
+      // Stop scanning after successful processing
+      setTimeout(() => {
+        setScannedTicket(null);
+        setIsScanning(false);
+      }, 2000);
 
     } catch (error) {
       console.error('Error updating ticket:', error);
       toast({
         title: "Update Error",
-        description: "Failed to update ticket status.",
+        description: "Failed to update ticket status. Please try again.",
         variant: "destructive",
       });
     } finally {
