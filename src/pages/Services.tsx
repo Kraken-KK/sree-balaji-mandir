@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -75,6 +74,12 @@ const Services = () => {
 
       if (paymentError) throw paymentError;
 
+      // Generate ticket number using the database function
+      const { data: ticketNumberData, error: ticketNumberError } = await supabase
+        .rpc('generate_ticket_number');
+
+      if (ticketNumberError) throw ticketNumberError;
+
       // Create ticket after successful payment creation
       const { data: ticketData, error: ticketError } = await supabase
         .from('tickets')
@@ -84,6 +89,7 @@ const Services = () => {
           customer_name: user.user_metadata?.full_name || user.email.split('@')[0],
           customer_email: user.email,
           qr_code: qrData,
+          ticket_number: ticketNumberData,
           service_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 7 days from now
         })
         .select()
