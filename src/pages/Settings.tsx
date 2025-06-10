@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
 import { User, Settings as SettingsIcon, Bell, Shield, Palette, Globe } from 'lucide-react';
+import UserHistorySection from '@/components/UserHistorySection';
 
 const Settings = () => {
   const { user, updateProfile, signOut } = useAuth();
@@ -118,7 +118,7 @@ const Settings = () => {
           </div>
 
           <Tabs defaultValue="profile" className="w-full animate-slide-up">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="profile" className="flex items-center gap-2">
                 <User className="w-4 h-4" />
                 Profile
@@ -130,6 +130,10 @@ const Settings = () => {
               <TabsTrigger value="appearance" className="flex items-center gap-2">
                 <Palette className="w-4 h-4" />
                 Appearance
+              </TabsTrigger>
+              <TabsTrigger value="history" className="flex items-center gap-2">
+                <Globe className="w-4 h-4" />
+                History
               </TabsTrigger>
               <TabsTrigger value="account" className="flex items-center gap-2">
                 <Shield className="w-4 h-4" />
@@ -307,6 +311,18 @@ const Settings = () => {
                       <option value="te">తెలుగు</option>
                     </select>
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="history">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Activity History</CardTitle>
+                  <CardDescription>View your donations, tickets, and payment history</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <UserHistorySection />
                 </CardContent>
               </Card>
             </TabsContent>

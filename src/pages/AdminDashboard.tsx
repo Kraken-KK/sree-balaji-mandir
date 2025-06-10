@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { AdminCodeInput } from '@/components/AdminCodeInput';
@@ -23,8 +22,10 @@ import {
   Settings,
   Image as ImageIcon,
   Plus,
-  Upload
+  Upload,
+  Activity as ActivityIcon
 } from 'lucide-react';
+import QRScanner from '@/components/QRScanner';
 
 const AdminDashboard = () => {
   const { user, isAdmin, checkAdminCode } = useAuth();
@@ -290,11 +291,12 @@ const AdminDashboard = () => {
 
         {/* Data Tables */}
         <Tabs defaultValue="users" className="w-full animate-slide-up" style={{ animationDelay: '0.5s' }}>
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="users">Users ({users.length})</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
             <TabsTrigger value="services">Services</TabsTrigger>
             <TabsTrigger value="gallery">Gallery</TabsTrigger>
+            <TabsTrigger value="scanner">QR Scanner</TabsTrigger>
             <TabsTrigger value="payments">Payments ({payments.length})</TabsTrigger>
             <TabsTrigger value="registrations">Registrations</TabsTrigger>
           </TabsList>
@@ -372,6 +374,21 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <AdminGalleryManager />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="scanner">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ActivityIcon className="w-5 h-5" />
+                  Ticket QR Scanner
+                </CardTitle>
+                <CardDescription>Scan and verify service tickets</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <QRScanner />
               </CardContent>
             </Card>
           </TabsContent>
@@ -463,3 +480,5 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
+}

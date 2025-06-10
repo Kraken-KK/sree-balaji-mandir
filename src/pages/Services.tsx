@@ -58,7 +58,11 @@ const Services = () => {
 
     setPaymentLoading(service.id);
     try {
-      const { data, error } = await supabase.functions.invoke('create-payment', {
+      // Generate QR code data
+      const qrData = `TICKET:${service.id}:${user.id}:${Date.now()}`;
+      
+      // Create payment first
+      const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-payment', {
         body: {
           amount: Number(service.price),
           currency: 'inr',
@@ -69,20 +73,39 @@ const Services = () => {
         }
       });
 
-      if (error) throw error;
+      if (paymentError) throw paymentError;
+
+      // Create ticket after successful payment creation
+      const { data: ticketData, error: ticketError } = await supabase
+        .from('tickets')
+        .insert({
+          user_id: user.id,
+          service_id: service.id,
+          customer_name: user.user_metadata?.full_name || user.email.split('@')[0],
+          customer_email: user.email,
+          qr_code: qrData,
+          service_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 7 days from now
+        })
+        .select()
+        .single();
+
+      if (ticketError) {
+        console.error('Ticket creation error:', ticketError);
+        // Continue with payment even if ticket creation fails
+      }
 
       // Open Stripe checkout in a new tab
-      window.open(data.url, '_blank');
+      window.open(paymentData.url, '_blank');
       
       toast({
         title: 'Redirecting to Payment',
-        description: 'Please complete your payment in the new window.',
+        description: 'Your ticket will be generated after successful payment.',
       });
     } catch (error) {
-      console.error('Payment error:', error);
+      console.error('Booking error:', error);
       toast({
-        title: 'Payment Error',
-        description: 'Failed to create payment session. Please try again.',
+        title: 'Booking Error',
+        description: 'Failed to book service. Please try again.',
         variant: 'destructive'
       });
     } finally {
