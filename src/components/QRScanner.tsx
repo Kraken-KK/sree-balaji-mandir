@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, Camera, CameraOff } from 'lucide-react';
+import { CheckCircle, XCircle, Camera, CameraOff, Scan } from 'lucide-react';
 
 const QRScanner: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
@@ -17,7 +17,9 @@ const QRScanner: React.FC = () => {
   const handleScan = async (result: string | null) => {
     if (!result || loading) return;
 
+    console.log('Scanned QR code:', result);
     setLoading(true);
+    
     try {
       // Find ticket by QR code
       const { data: ticket, error } = await supabase
@@ -27,19 +29,43 @@ const QRScanner: React.FC = () => {
           services (name)
         `)
         .eq('qr_code', result)
-        .eq('status', 'active')
         .single();
 
-      if (error || !ticket) {
+      console.log('Ticket query result:', { ticket, error });
+
+      if (error) {
+        console.error('Database error:', error);
         toast({
-          title: "Invalid Ticket",
-          description: "This ticket is not valid or has already been used.",
+          title: "Ticket Not Found",
+          description: "This QR code doesn't match any ticket in our system.",
           variant: "destructive",
         });
         setScannedTicket(null);
         return;
       }
 
+      if (!ticket) {
+        toast({
+          title: "Invalid Ticket",
+          description: "No ticket found with this QR code.",
+          variant: "destructive",
+        });
+        setScannedTicket(null);
+        return;
+      }
+
+      // Check if ticket is already used
+      if (ticket.status === 'used') {
+        toast({
+          title: "Ticket Already Used",
+          description: `Ticket ${ticket.ticket_number} has already been processed.`,
+          variant: "destructive",
+        });
+        setScannedTicket(ticket);
+        return;
+      }
+
+      // Valid active ticket found
       setScannedTicket(ticket);
       toast({
         title: "Valid Ticket Found",
@@ -95,10 +121,12 @@ const QRScanner: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="animate-fade-in hover-lift">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Camera className="w-5 h-5" />
+            <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
+              <Scan className="w-5 h-5 text-primary" />
+            </div>
             QR Code Scanner
           </CardTitle>
         </CardHeader>
@@ -107,16 +135,17 @@ const QRScanner: React.FC = () => {
             <Button
               onClick={() => setIsScanning(!isScanning)}
               variant={isScanning ? "destructive" : "default"}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 hover-scale transition-all duration-300"
+              size="lg"
             >
               {isScanning ? (
                 <>
-                  <CameraOff className="w-4 h-4" />
+                  <CameraOff className="w-5 h-5" />
                   Stop Scanning
                 </>
               ) : (
                 <>
-                  <Camera className="w-4 h-4" />
+                  <Camera className="w-5 h-5" />
                   Start Scanning
                 </>
               )}
@@ -124,58 +153,93 @@ const QRScanner: React.FC = () => {
           </div>
 
           {isScanning && (
-            <div className="w-full max-w-sm mx-auto">
-              <QrReader
-                onResult={(result, error) => {
-                  if (result) {
-                    handleScan(result.getText());
-                  }
-                }}
-                constraints={{ facingMode: 'environment' }}
-                className="w-full"
-              />
+            <div className="w-full max-w-sm mx-auto animate-scale-in">
+              <div className="relative">
+                <QrReader
+                  onResult={(result, error) => {
+                    if (result) {
+                      handleScan(result.getText());
+                    }
+                    if (error) {
+                      console.log('QR Reader error:', error);
+                    }
+                  }}
+                  constraints={{ facingMode: 'environment' }}
+                  className="w-full rounded-lg overflow-hidden"
+                />
+                <div className="absolute inset-0 border-2 border-primary rounded-lg pointer-events-none">
+                  <div className="absolute top-2 left-2 w-6 h-6 border-l-4 border-t-4 border-primary rounded-tl-lg"></div>
+                  <div className="absolute top-2 right-2 w-6 h-6 border-r-4 border-t-4 border-primary rounded-tr-lg"></div>
+                  <div className="absolute bottom-2 left-2 w-6 h-6 border-l-4 border-b-4 border-primary rounded-bl-lg"></div>
+                  <div className="absolute bottom-2 right-2 w-6 h-6 border-r-4 border-b-4 border-primary rounded-br-lg"></div>
+                </div>
+              </div>
+              <p className="text-center text-sm text-muted-foreground mt-2">
+                Point camera at QR code to scan
+              </p>
             </div>
           )}
         </CardContent>
       </Card>
 
       {scannedTicket && (
-        <Card className="border-green-200 bg-green-50">
+        <Card className={`animate-scale-in hover-lift ${
+          scannedTicket.status === 'used' 
+            ? 'border-red-200 bg-red-50' 
+            : 'border-green-200 bg-green-50'
+        }`}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-700">
-              <CheckCircle className="w-5 h-5" />
-              Valid Ticket Scanned
+            <CardTitle className={`flex items-center gap-2 ${
+              scannedTicket.status === 'used' 
+                ? 'text-red-700' 
+                : 'text-green-700'
+            }`}>
+              {scannedTicket.status === 'used' ? (
+                <XCircle className="w-5 h-5" />
+              ) : (
+                <CheckCircle className="w-5 h-5" />
+              )}
+              {scannedTicket.status === 'used' ? 'Ticket Already Used' : 'Valid Ticket Scanned'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <strong>Ticket Number:</strong>
-                <p className="font-mono">{scannedTicket.ticket_number}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div className="space-y-2">
+                <div>
+                  <strong>Ticket Number:</strong>
+                  <p className="font-mono text-lg">{scannedTicket.ticket_number}</p>
+                </div>
+                <div>
+                  <strong>Customer:</strong>
+                  <p>{scannedTicket.customer_name}</p>
+                </div>
               </div>
-              <div>
-                <strong>Customer:</strong>
-                <p>{scannedTicket.customer_name}</p>
-              </div>
-              <div>
-                <strong>Service:</strong>
-                <p>{scannedTicket.services?.name}</p>
-              </div>
-              <div>
-                <strong>Status:</strong>
-                <Badge variant="default">{scannedTicket.status}</Badge>
+              <div className="space-y-2">
+                <div>
+                  <strong>Service:</strong>
+                  <p>{scannedTicket.services?.name}</p>
+                </div>
+                <div>
+                  <strong>Status:</strong>
+                  <Badge variant={scannedTicket.status === 'used' ? 'destructive' : 'default'}>
+                    {scannedTicket.status}
+                  </Badge>
+                </div>
               </div>
             </div>
 
-            <div className="flex justify-center pt-4">
-              <Button
-                onClick={markTicketAsUsed}
-                disabled={loading}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {loading ? 'Processing...' : 'Mark as Used'}
-              </Button>
-            </div>
+            {scannedTicket.status === 'active' && (
+              <div className="flex justify-center pt-4">
+                <Button
+                  onClick={markTicketAsUsed}
+                  disabled={loading}
+                  className="bg-green-600 hover:bg-green-700 hover-scale"
+                  size="lg"
+                >
+                  {loading ? 'Processing...' : 'Mark as Used'}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

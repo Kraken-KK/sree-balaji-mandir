@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { AdminCodeInput } from '@/components/AdminCodeInput';
@@ -21,14 +22,12 @@ import {
   Activity,
   Settings,
   Image as ImageIcon,
-  Plus,
-  Upload,
   Activity as ActivityIcon
 } from 'lucide-react';
 import QRScanner from '@/components/QRScanner';
 
 const AdminDashboard = () => {
-  const { user, isAdmin, checkAdminCode } = useAuth();
+  const { user, checkAdminCode } = useAuth();
   const { toast } = useToast();
   const [isAdminVerified, setIsAdminVerified] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -42,11 +41,13 @@ const AdminDashboard = () => {
   const [registrations, setRegistrations] = useState([]);
 
   useEffect(() => {
-    if (isAdmin || isAdminVerified) {
+    if (isAdminVerified) {
       fetchAllData();
       setupRealtimeSubscriptions();
+    } else {
+      setLoading(false);
     }
-  }, [isAdmin, isAdminVerified]);
+  }, [isAdminVerified]);
 
   const fetchAllData = async () => {
     try {
@@ -111,11 +112,11 @@ const AdminDashboard = () => {
     }, 1000);
   };
 
-  if (!isAdmin && !isAdminVerified) {
+  if (!isAdminVerified) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
         <Navbar />
-        <div className="container mx-auto px-4 py-16">
+        <div className="container mx-auto px-4 py-8 md:py-16">
           <AdminCodeInput onSubmit={handleAdminCodeSubmit} loading={adminCodeLoading} />
         </div>
       </div>
@@ -126,7 +127,7 @@ const AdminDashboard = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
         <Navbar />
-        <div className="container mx-auto px-4 py-16">
+        <div className="container mx-auto px-4 py-8 md:py-16">
           <div className="text-center">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
             <p className="mt-4 text-lg">Loading dashboard data...</p>
@@ -140,7 +141,6 @@ const AdminDashboard = () => {
   const totalDonations = payments.filter(p => p.type === 'donation' && p.status === 'completed').reduce((sum, p) => sum + Number(p.amount), 0);
   const totalServices = payments.filter(p => p.type === 'service' && p.status === 'completed').reduce((sum, p) => sum + Number(p.amount), 0);
   const totalRevenue = totalDonations + totalServices;
-  const completedPayments = payments.filter(p => p.status === 'completed').length;
 
   // Chart data
   const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -200,34 +200,34 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8 animate-fade-in">
+      <div className="container mx-auto px-2 md:px-4 py-4 md:py-8 animate-fade-in">
         {/* Header */}
-        <div className="mb-8 animate-slide-up">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+        <div className="mb-6 md:mb-8 animate-slide-up">
+          <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             Admin Dashboard
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-2 text-sm md:text-base">
             Comprehensive temple management and analytics
           </p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
           {statsCards.map((stat, index) => (
             <Card 
               key={index} 
               className="relative overflow-hidden hover:shadow-lg transition-all duration-300 hover-lift animate-scale-in"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{stat.title}</p>
-                    <p className="text-3xl font-bold">{stat.value}</p>
+              <CardContent className="p-3 md:p-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
+                  <div className="w-full">
+                    <p className="text-xs md:text-sm text-muted-foreground">{stat.title}</p>
+                    <p className="text-lg md:text-3xl font-bold">{stat.value}</p>
                     <p className="text-xs text-green-600 mt-1">{stat.change} from last month</p>
                   </div>
-                  <div className={`p-3 rounded-full bg-muted/50 ${stat.color}`}>
-                    <stat.icon className="w-6 h-6" />
+                  <div className={`p-2 md:p-3 rounded-full bg-muted/50 ${stat.color} mt-2 md:mt-0`}>
+                    <stat.icon className="w-4 h-4 md:w-6 md:h-6" />
                   </div>
                 </div>
               </CardContent>
@@ -236,21 +236,21 @@ const AdminDashboard = () => {
         </div>
 
         {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
           <Card className="col-span-1 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
+            <CardHeader className="pb-2 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                <TrendingUp className="w-4 h-4 md:w-5 md:h-5" />
                 Activity Trends
               </CardTitle>
-              <CardDescription>Daily payments and registrations</CardDescription>
+              <CardDescription className="text-xs md:text-sm">Daily payments and registrations</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={200}>
                 <AreaChart data={dailyStats}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
+                  <XAxis dataKey="date" fontSize={12} />
+                  <YAxis fontSize={12} />
                   <Tooltip />
                   <Area type="monotone" dataKey="payments" stackId="1" stroke="#E0B020" fill="#E0B020" fillOpacity={0.6} />
                   <Area type="monotone" dataKey="registrations" stackId="1" stroke="#EC4899" fill="#EC4899" fillOpacity={0.6} />
@@ -260,23 +260,24 @@ const AdminDashboard = () => {
           </Card>
 
           <Card className="col-span-1 animate-slide-up" style={{ animationDelay: '0.4s' }}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5" />
+            <CardHeader className="pb-2 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                <CreditCard className="w-4 h-4 md:w-5 md:h-5" />
                 Revenue Distribution
               </CardTitle>
-              <CardDescription>Breakdown by source</CardDescription>
+              <CardDescription className="text-xs md:text-sm">Breakdown by source</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie
                     data={revenueData}
                     cx="50%"
                     cy="50%"
-                    outerRadius={100}
+                    outerRadius={80}
                     dataKey="value"
                     label={({ name, value }) => `${name}: ₹${value.toLocaleString()}`}
+                    fontSize={10}
                   >
                     {revenueData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -289,47 +290,47 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Data Tables */}
+        {/* Mobile-optimized Tabs */}
         <Tabs defaultValue="users" className="w-full animate-slide-up" style={{ animationDelay: '0.5s' }}>
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="users">Users ({users.length})</TabsTrigger>
-            <TabsTrigger value="events">Events</TabsTrigger>
-            <TabsTrigger value="services">Services</TabsTrigger>
-            <TabsTrigger value="gallery">Gallery</TabsTrigger>
-            <TabsTrigger value="scanner">QR Scanner</TabsTrigger>
-            <TabsTrigger value="payments">Payments ({payments.length})</TabsTrigger>
-            <TabsTrigger value="registrations">Registrations</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-7 gap-1 h-auto">
+            <TabsTrigger value="users" className="text-xs md:text-sm px-1 md:px-3">Users</TabsTrigger>
+            <TabsTrigger value="events" className="text-xs md:text-sm px-1 md:px-3">Events</TabsTrigger>
+            <TabsTrigger value="services" className="text-xs md:text-sm px-1 md:px-3">Services</TabsTrigger>
+            <TabsTrigger value="gallery" className="text-xs md:text-sm px-1 md:px-3">Gallery</TabsTrigger>
+            <TabsTrigger value="scanner" className="text-xs md:text-sm px-1 md:px-3">Scanner</TabsTrigger>
+            <TabsTrigger value="payments" className="text-xs md:text-sm px-1 md:px-3">Payments</TabsTrigger>
+            <TabsTrigger value="registrations" className="text-xs md:text-sm px-1 md:px-3">Registrations</TabsTrigger>
           </TabsList>
 
           <TabsContent value="users">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Registered Users
+                <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                  <Users className="w-4 h-4 md:w-5 md:h-5" />
+                  Registered Users ({users.length})
                 </CardTitle>
-                <CardDescription>All registered temple community members</CardDescription>
+                <CardDescription className="text-xs md:text-sm">All registered temple community members</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Username</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Location</TableHead>
-                        <TableHead>Joined</TableHead>
+                        <TableHead className="text-xs md:text-sm">Name</TableHead>
+                        <TableHead className="text-xs md:text-sm hidden md:table-cell">Username</TableHead>
+                        <TableHead className="text-xs md:text-sm hidden md:table-cell">Phone</TableHead>
+                        <TableHead className="text-xs md:text-sm">Location</TableHead>
+                        <TableHead className="text-xs md:text-sm">Joined</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {users.slice(0, 10).map((user: any) => (
                         <TableRow key={user.id}>
-                          <TableCell className="font-medium">{user.full_name || 'N/A'}</TableCell>
-                          <TableCell>{user.username || 'N/A'}</TableCell>
-                          <TableCell>{user.phone || 'N/A'}</TableCell>
-                          <TableCell>{user.location || 'N/A'}</TableCell>
-                          <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="font-medium text-xs md:text-sm">{user.full_name || 'N/A'}</TableCell>
+                          <TableCell className="text-xs md:text-sm hidden md:table-cell">{user.username || 'N/A'}</TableCell>
+                          <TableCell className="text-xs md:text-sm hidden md:table-cell">{user.phone || 'N/A'}</TableCell>
+                          <TableCell className="text-xs md:text-sm">{user.location || 'N/A'}</TableCell>
+                          <TableCell className="text-xs md:text-sm">{new Date(user.created_at).toLocaleDateString()}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -342,8 +343,8 @@ const AdminDashboard = () => {
           <TabsContent value="events">
             <Card>
               <CardHeader>
-                <CardTitle>Event Management</CardTitle>
-                <CardDescription>Create and manage temple events</CardDescription>
+                <CardTitle className="text-sm md:text-base">Event Management</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Create and manage temple events</CardDescription>
               </CardHeader>
               <CardContent>
                 <AdminEventManager />
@@ -354,8 +355,8 @@ const AdminDashboard = () => {
           <TabsContent value="services">
             <Card>
               <CardHeader>
-                <CardTitle>Service Management</CardTitle>
-                <CardDescription>Create and manage temple services</CardDescription>
+                <CardTitle className="text-sm md:text-base">Service Management</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Create and manage temple services</CardDescription>
               </CardHeader>
               <CardContent>
                 <AdminServiceManager />
@@ -366,11 +367,11 @@ const AdminDashboard = () => {
           <TabsContent value="gallery">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                  <ImageIcon className="w-4 h-4 md:w-5 md:h-5" />
                   Gallery Management
                 </CardTitle>
-                <CardDescription>Upload and manage temple gallery images</CardDescription>
+                <CardDescription className="text-xs md:text-sm">Upload and manage temple gallery images</CardDescription>
               </CardHeader>
               <CardContent>
                 <AdminGalleryManager />
@@ -381,11 +382,11 @@ const AdminDashboard = () => {
           <TabsContent value="scanner">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ActivityIcon className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                  <ActivityIcon className="w-4 h-4 md:w-5 md:h-5" />
                   Ticket QR Scanner
                 </CardTitle>
-                <CardDescription>Scan and verify service tickets</CardDescription>
+                <CardDescription className="text-xs md:text-sm">Scan and verify service tickets</CardDescription>
               </CardHeader>
               <CardContent>
                 <QRScanner />
@@ -396,41 +397,41 @@ const AdminDashboard = () => {
           <TabsContent value="payments">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5" />
-                  Payment History
+                <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                  <CreditCard className="w-4 h-4 md:w-5 md:h-5" />
+                  Payment History ({payments.length})
                 </CardTitle>
-                <CardDescription>Real-time payment transactions</CardDescription>
+                <CardDescription className="text-xs md:text-sm">Real-time payment transactions</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
+                        <TableHead className="text-xs md:text-sm">Customer</TableHead>
+                        <TableHead className="text-xs md:text-sm">Type</TableHead>
+                        <TableHead className="text-xs md:text-sm">Amount</TableHead>
+                        <TableHead className="text-xs md:text-sm hidden md:table-cell">Status</TableHead>
+                        <TableHead className="text-xs md:text-sm">Date</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {payments.slice(0, 10).map((payment: any) => (
                         <TableRow key={payment.id}>
-                          <TableCell className="font-medium">{payment.customer_name || 'Anonymous'}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{payment.type}</Badge>
+                          <TableCell className="font-medium text-xs md:text-sm">{payment.customer_name || 'Anonymous'}</TableCell>
+                          <TableCell className="text-xs md:text-sm">
+                            <Badge variant="outline" className="text-xs">{payment.type}</Badge>
                           </TableCell>
-                          <TableCell>₹{Number(payment.amount).toLocaleString()}</TableCell>
-                          <TableCell>
+                          <TableCell className="text-xs md:text-sm">₹{Number(payment.amount).toLocaleString()}</TableCell>
+                          <TableCell className="hidden md:table-cell">
                             <Badge variant={
                               payment.status === 'completed' ? 'default' :
                               payment.status === 'pending' ? 'secondary' : 'destructive'
-                            }>
+                            } className="text-xs">
                               {payment.status}
                             </Badge>
                           </TableCell>
-                          <TableCell>{new Date(payment.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-xs md:text-sm">{new Date(payment.created_at).toLocaleDateString()}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -443,28 +444,28 @@ const AdminDashboard = () => {
           <TabsContent value="registrations">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Event Registrations
+                <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                  <Calendar className="w-4 h-4 md:w-5 md:h-5" />
+                  Event Registrations ({registrations.length})
                 </CardTitle>
-                <CardDescription>Live event registration data</CardDescription>
+                <CardDescription className="text-xs md:text-sm">Live event registration data</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Event</TableHead>
-                        <TableHead>Members</TableHead>
-                        <TableHead>Date</TableHead>
+                        <TableHead className="text-xs md:text-sm">Event</TableHead>
+                        <TableHead className="text-xs md:text-sm">Members</TableHead>
+                        <TableHead className="text-xs md:text-sm">Date</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {registrations.slice(0, 10).map((reg: any) => (
                         <TableRow key={reg.id}>
-                          <TableCell className="font-medium">{reg.events?.name || 'Unknown Event'}</TableCell>
-                          <TableCell>{reg.member_count}</TableCell>
-                          <TableCell>{new Date(reg.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="font-medium text-xs md:text-sm">{reg.events?.name || 'Unknown Event'}</TableCell>
+                          <TableCell className="text-xs md:text-sm">{reg.member_count}</TableCell>
+                          <TableCell className="text-xs md:text-sm">{new Date(reg.created_at).toLocaleDateString()}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
