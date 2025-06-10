@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +21,7 @@ import Auth from "./pages/Auth";
 import Settings from "./pages/Settings";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import ProtectedRoute from "./components/ProtectedRoute";
+import CreatedByBadge from './components/Navbar';
 
 const queryClient = new QueryClient();
 
@@ -35,25 +35,28 @@ const App = () => (
             <Sonner />
             <OnboardingFlow />
             <BrowserRouter>
-              <Routes>
-                <Route path="/landing" element={<Landing />} />
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/gallery" element={<Gallery />} />
-                <Route path="/events" element={<Events />} />
-                <Route path="/services" element={<Services />} />
-                <Route path="/donations" element={<Donations />} />
-                <Route path="/signup" element={<SignUp />} />
-                <Route path="/history" element={<History />} />
-                <Route path="/payment-success" element={<PaymentSuccess />} />
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin-dashboard" element={<AdminDashboard />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <div className="App">
+                <Routes>
+                  <Route path="/landing" element={<Landing />} />
+                  <Route path="/" element={<Index />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/gallery" element={<Gallery />} />
+                  <Route path="/events" element={<Events />} />
+                  <Route path="/services" element={<Services />} />
+                  <Route path="/donations" element={<Donations />} />
+                  <Route path="/signup" element={<SignUp />} />
+                  <Route path="/history" element={<History />} />
+                  <Route path="/payment-success" element={<PaymentSuccess />} />
+                  <Route path="/settings" element={
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin-dashboard" element={<AdminDashboard />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                <CreatedByBadge />
+              </div>
             </BrowserRouter>
           </TooltipProvider>
         </AuthProvider>

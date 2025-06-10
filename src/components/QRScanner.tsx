@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { QrReader } from 'react-qr-reader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +12,7 @@ const QRScanner: React.FC = () => {
   const [scannedTicket, setScannedTicket] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [lastScannedCode, setLastScannedCode] = useState<string>('');
+  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('environment');
   const { toast } = useToast();
 
   // Set up real-time subscription to ticket updates
@@ -249,7 +249,7 @@ const QRScanner: React.FC = () => {
                       console.log('QR Reader error:', error);
                     }
                   }}
-                  constraints={{ facingMode: 'environment' }}
+                  constraints={{ facingMode: cameraFacingMode }}
                   className="w-full rounded-lg overflow-hidden"
                 />
                 <div className="absolute inset-0 border-2 border-primary rounded-lg pointer-events-none">
@@ -262,6 +262,20 @@ const QRScanner: React.FC = () => {
               <p className="text-center text-sm text-muted-foreground mt-2">
                 Point camera at QR code to scan
               </p>
+            </div>
+          )}
+
+          {isScanning && (
+            <div className="flex justify-center">
+              <Button
+                onClick={() => setCameraFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))}
+                variant="outline"
+                className="flex items-center gap-2"
+                size="lg"
+              >
+                <Camera className="w-5 h-5" />
+                Switch Camera
+              </Button>
             </div>
           )}
         </CardContent>

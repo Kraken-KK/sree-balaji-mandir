@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -21,10 +20,10 @@ import {
   Filter,
   RefreshCw
 } from 'lucide-react';
-import AdminEventManager from '@/components/AdminEventManager';
-import AdminGalleryManager from '@/components/AdminGalleryManager';
-import AdminServiceManager from '@/components/AdminServiceManager';
-import AdminCodeInput from '@/components/AdminCodeInput';
+import { AdminEventManager } from '@/components/AdminEventManager';
+import { AdminGalleryManager } from '@/components/AdminGalleryManager';
+import { AdminServiceManager } from '@/components/AdminServiceManager';
+import { AdminCodeInput } from '@/components/AdminCodeInput';
 
 const AdminDashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
