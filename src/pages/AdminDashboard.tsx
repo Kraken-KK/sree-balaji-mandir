@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { AdminEventManager } from '@/components/AdminEventManager';
 import { AdminServiceManager } from '@/components/AdminServiceManager';
+import { AdminGalleryManager } from '@/components/AdminGalleryManager';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,10 +25,6 @@ import {
   Plus,
   Upload
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const AdminDashboard = () => {
   const { user, isAdmin, checkAdminCode } = useAuth();
@@ -42,11 +39,6 @@ const AdminDashboard = () => {
   const [events, setEvents] = useState([]);
   const [services, setServices] = useState([]);
   const [registrations, setRegistrations] = useState([]);
-  const [galleryItems, setGalleryItems] = useState([]);
-
-  // Gallery management states
-  const [isGalleryDialogOpen, setIsGalleryDialogOpen] = useState(false);
-  const [newGalleryItem, setNewGalleryItem] = useState({ url: '', type: 'image', title: '' });
 
   useEffect(() => {
     if (isAdmin || isAdminVerified) {
@@ -116,26 +108,6 @@ const AdminDashboard = () => {
       }
       setAdminCodeLoading(false);
     }, 1000);
-  };
-
-  const addGalleryItem = () => {
-    if (!newGalleryItem.url || !newGalleryItem.title) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide both URL and title.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setGalleryItems(prev => [...prev, { ...newGalleryItem, id: Date.now() }]);
-    setNewGalleryItem({ url: '', type: 'image', title: '' });
-    setIsGalleryDialogOpen(false);
-    
-    toast({
-      title: "Gallery Updated",
-      description: "New item added to gallery successfully.",
-    });
   };
 
   if (!isAdmin && !isAdminVerified) {
@@ -227,9 +199,9 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 animate-fade-in">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 animate-slide-up">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             Admin Dashboard
           </h1>
@@ -241,7 +213,11 @@ const AdminDashboard = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {statsCards.map((stat, index) => (
-            <Card key={index} className="relative overflow-hidden hover:shadow-lg transition-shadow">
+            <Card 
+              key={index} 
+              className="relative overflow-hidden hover:shadow-lg transition-all duration-300 hover-lift animate-scale-in"
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -260,7 +236,7 @@ const AdminDashboard = () => {
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card className="col-span-1">
+          <Card className="col-span-1 animate-slide-up" style={{ animationDelay: '0.3s' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5" />
@@ -282,7 +258,7 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="col-span-1">
+          <Card className="col-span-1 animate-slide-up" style={{ animationDelay: '0.4s' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5" />
@@ -313,11 +289,12 @@ const AdminDashboard = () => {
         </div>
 
         {/* Data Tables */}
-        <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+        <Tabs defaultValue="users" className="w-full animate-slide-up" style={{ animationDelay: '0.5s' }}>
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="users">Users ({users.length})</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
             <TabsTrigger value="services">Services</TabsTrigger>
+            <TabsTrigger value="gallery">Gallery</TabsTrigger>
             <TabsTrigger value="payments">Payments ({payments.length})</TabsTrigger>
             <TabsTrigger value="registrations">Registrations</TabsTrigger>
           </TabsList>
@@ -380,6 +357,21 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <AdminServiceManager />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="gallery">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5" />
+                  Gallery Management
+                </CardTitle>
+                <CardDescription>Upload and manage temple gallery images</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AdminGalleryManager />
               </CardContent>
             </Card>
           </TabsContent>

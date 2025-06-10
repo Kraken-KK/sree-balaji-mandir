@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
@@ -38,7 +39,7 @@
   @keyframes fade-in {
     0% {
       opacity: 0;
-      transform: translateY(8px);
+      transform: translateY(20px);
     }
     100% {
       opacity: 1;
@@ -49,7 +50,7 @@
   @keyframes slide-up {
     0% {
       opacity: 0;
-      transform: translateY(15px);
+      transform: translateY(30px);
     }
     100% {
       opacity: 1;
@@ -60,7 +61,7 @@
   @keyframes slide-down {
     0% {
       opacity: 0;
-      transform: translateY(-8px);
+      transform: translateY(-20px);
     }
     100% {
       opacity: 1;
@@ -71,7 +72,7 @@
   @keyframes scale-in {
     0% {
       opacity: 0;
-      transform: scale(0.95);
+      transform: scale(0.9);
     }
     100% {
       opacity: 1;
@@ -82,9 +83,22 @@
   @keyframes slide-in-right {
     0% {
       transform: translateX(100%);
+      opacity: 0;
     }
     100% {
       transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-in-left {
+    0% {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    100% {
+      transform: translateX(0);
+      opacity: 1;
     }
   }
 
@@ -94,6 +108,15 @@
     }
     50% {
       transform: translateY(-8px);
+    }
+  }
+
+  @keyframes bounce-gentle {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
     }
   }
 
@@ -111,32 +134,58 @@
       opacity: 1;
     }
     50% {
-      opacity: 0.8;
+      opacity: 0.7;
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes rotate-gentle {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
     }
   }
 
   .animate-fade-in {
-    animation: fade-in 0.3s ease-out forwards;
+    animation: fade-in 0.6s ease-out forwards;
   }
 
   .animate-slide-up {
-    animation: slide-up 0.3s ease-out forwards;
+    animation: slide-up 0.6s ease-out forwards;
   }
 
   .animate-slide-down {
-    animation: slide-down 0.25s ease-out forwards;
+    animation: slide-down 0.4s ease-out forwards;
   }
 
   .animate-scale-in {
-    animation: scale-in 0.25s ease-out forwards;
+    animation: scale-in 0.4s ease-out forwards;
   }
 
   .animate-slide-in-right {
-    animation: slide-in-right 0.25s ease-out forwards;
+    animation: slide-in-right 0.5s ease-out forwards;
+  }
+
+  .animate-slide-in-left {
+    animation: slide-in-left 0.5s ease-out forwards;
   }
 
   .animate-float {
     animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-bounce-gentle {
+    animation: bounce-gentle 2s ease-in-out infinite;
   }
 
   .animate-ken-burns {
@@ -144,25 +193,63 @@
   }
 
   .animate-pulse-soft {
-    animation: pulse-soft 2s ease-in-out infinite;
+    animation: pulse-soft 3s ease-in-out infinite;
   }
 
-  /* Fast hover transitions */
+  .animate-shimmer {
+    animation: shimmer 2s ease-in-out infinite;
+  }
+
+  .animate-rotate-gentle {
+    animation: rotate-gentle 20s linear infinite;
+  }
+
+  /* Enhanced hover transitions */
   .hover-fast {
-    transition: all 0.12s ease-out;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hover-smooth {
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
   .hover-scale {
-    @apply hover-fast hover:scale-105;
+    @apply hover-smooth hover:scale-105;
   }
 
   .hover-lift {
-    @apply hover-fast hover:-translate-y-1 hover:shadow-lg;
+    @apply hover-smooth hover:-translate-y-2 hover:shadow-xl;
   }
 
   .hover-glow {
-    @apply hover-fast hover:shadow-lg hover:shadow-primary/25;
+    @apply hover-smooth hover:shadow-2xl hover:shadow-primary/25;
   }
+
+  .hover-tilt {
+    @apply hover-smooth hover:rotate-1;
+  }
+
+  /* Interactive elements */
+  .interactive-card {
+    @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10;
+  }
+
+  .interactive-button {
+    @apply transition-all duration-200 ease-out hover:scale-105 active:scale-95;
+  }
+
+  .glass-effect {
+    backdrop-filter: blur(16px);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  /* Staggered animations */
+  .stagger-1 { animation-delay: 0.1s; }
+  .stagger-2 { animation-delay: 0.2s; }
+  .stagger-3 { animation-delay: 0.3s; }
+  .stagger-4 { animation-delay: 0.4s; }
+  .stagger-5 { animation-delay: 0.5s; }
 }
 
 /* Responsive improvements */
@@ -170,7 +257,7 @@
   .animate-fade-in,
   .animate-slide-up,
   .animate-scale-in {
-    animation-duration: 0.25s;
+    animation-duration: 0.4s;
   }
 }
 
@@ -191,6 +278,7 @@
 .animate-slide-down,
 .animate-scale-in,
 .animate-slide-in-right,
+.animate-slide-in-left,
 .animate-float,
 .animate-ken-burns {
   will-change: transform, opacity;
@@ -240,6 +328,14 @@ html {
   @apply active:scale-95 transition-transform duration-75;
 }
 
+/* Loading states */
+.loading-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Dark mode enhancements */
 html.dark {
   --background: #18181b;
   --foreground: #f4f4f5;
@@ -249,4 +345,31 @@ html.dark {
   --popover-foreground: #f4f4f5;
   --sidebar: #232326;
   --sidebar-foreground: #f4f4f5;
+}
+
+/* Onboarding specific styles */
+.onboarding-step {
+  @apply animate-fade-in;
+}
+
+.onboarding-progress {
+  @apply transition-all duration-500 ease-out;
+}
+
+/* Gallery specific animations */
+.gallery-item {
+  @apply transition-all duration-500 ease-out hover:scale-105;
+}
+
+.gallery-overlay {
+  @apply transition-all duration-300 ease-out;
+}
+
+/* Admin dashboard enhancements */
+.admin-card {
+  @apply transition-all duration-300 ease-out hover:shadow-lg hover:-translate-y-1;
+}
+
+.stats-card {
+  @apply hover:shadow-xl hover:shadow-primary/10 transition-all duration-300;
 }
