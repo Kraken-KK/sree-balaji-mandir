@@ -18,12 +18,14 @@ import {
   Eye,
   Search,
   Filter,
-  RefreshCw
+  RefreshCw,
+  Scan
 } from 'lucide-react';
 import { AdminEventManager } from '@/components/AdminEventManager';
 import { AdminGalleryManager } from '@/components/AdminGalleryManager';
 import { AdminServiceManager } from '@/components/AdminServiceManager';
 import { AdminCodeInput } from '@/components/AdminCodeInput';
+import QRScanner from '@/components/QRScanner';
 
 const AdminDashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -183,7 +185,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="tickets" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 gap-2">
             <TabsTrigger value="tickets" className="flex items-center gap-2 text-xs md:text-sm">
               <Ticket className="w-4 h-4" />
               <span className="hidden sm:inline">Tickets</span>
@@ -203,6 +205,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="users" className="flex items-center gap-2 text-xs md:text-sm">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="qr-scanner" className="flex items-center gap-2 text-xs md:text-sm">
+              <Scan className="w-4 h-4" />
+              <span className="hidden sm:inline">QR Scanner</span>
             </TabsTrigger>
           </TabsList>
 
@@ -354,6 +360,10 @@ const AdminDashboard = () => {
                 <p className="text-muted-foreground">User management features coming soon...</p>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="qr-scanner" className="space-y-6">
+            <QRScanner />
           </TabsContent>
         </Tabs>
       </div>

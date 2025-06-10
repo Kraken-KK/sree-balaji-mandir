@@ -13,6 +13,8 @@ const QRScanner: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [lastScannedCode, setLastScannedCode] = useState<string>('');
   const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('environment');
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const { toast } = useToast();
 
   // Set up real-time subscription to ticket updates
@@ -39,6 +41,21 @@ const QRScanner: React.FC = () => {
       supabase.removeChannel(channel);
     };
   }, [scannedTicket]);
+
+  useEffect(() => {
+    navigator.mediaDevices.enumerateDevices().then((deviceInfos) => {
+      const videoDevices = deviceInfos.filter((device) => device.kind === 'videoinput');
+      setDevices(videoDevices);
+      if (videoDevices.length > 0) {
+        setSelectedDeviceId(videoDevices[0].deviceId);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    console.log('Available video devices:', devices);
+    console.log('Selected device ID:', selectedDeviceId);
+  }, [devices, selectedDeviceId]);
 
   const handleScan = async (result: string | null) => {
     if (!result || loading || result === lastScannedCode) return;
@@ -249,7 +266,9 @@ const QRScanner: React.FC = () => {
                       console.log('QR Reader error:', error);
                     }
                   }}
-                  constraints={{ facingMode: cameraFacingMode }}
+                  constraints={{
+                    video: { deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined },
+                  }}
                   className="w-full rounded-lg overflow-hidden"
                 />
                 <div className="absolute inset-0 border-2 border-primary rounded-lg pointer-events-none">
@@ -276,6 +295,22 @@ const QRScanner: React.FC = () => {
                 <Camera className="w-5 h-5" />
                 Switch Camera
               </Button>
+            </div>
+          )}
+
+          {devices.length > 0 && (
+            <div className="flex justify-center gap-2">
+              <select
+                value={selectedDeviceId}
+                onChange={(e) => setSelectedDeviceId(e.target.value)}
+                className="border rounded px-2 py-1"
+              >
+                {devices.map((device) => (
+                  <option key={device.deviceId} value={device.deviceId}>
+                    {device.label || `Camera ${device.deviceId}`}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
         </CardContent>
