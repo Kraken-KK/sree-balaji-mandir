@@ -54,9 +54,9 @@ export const OnboardingFlow = () => {
         throw error;
       }
 
-      // Only show onboarding for new users who haven't completed it
+      // Only show onboarding for users who don't have an onboarding record yet (truly new users)
       if (!data) {
-        // Create onboarding record for new user
+        // Create onboarding record for new user and show onboarding
         await supabase
           .from('user_onboarding')
           .insert({
@@ -65,11 +65,8 @@ export const OnboardingFlow = () => {
             completed: false
           });
         setIsOpen(true);
-      } else if (!data.completed) {
-        setCurrentStep(data.current_step || 1);
-        setIsOpen(true);
       }
-      // If completed is true, don't show onboarding
+      // If data exists (user has seen onboarding before), don't show it again
     } catch (error) {
       console.error('Error checking onboarding status:', error);
     } finally {

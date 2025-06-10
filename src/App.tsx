@@ -9,6 +9,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import Index from "./pages/Index";
+import Landing from "./pages/Landing";
 import Gallery from "./pages/Gallery";
 import Events from "./pages/Events";
 import Services from "./pages/Services";
@@ -35,6 +36,7 @@ const App = () => (
             <OnboardingFlow />
             <BrowserRouter>
               <Routes>
+                <Route path="/landing" element={<Landing />} />
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/gallery" element={<Gallery />} />

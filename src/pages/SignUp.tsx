@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -45,6 +46,11 @@ const SignUp = () => {
         phone: signupData.phone,
         newsletter: signupData.newsletter,
       });
+      
+      // If user subscribed to newsletter, redirect to blog
+      if (signupData.newsletter) {
+        window.open('https://sree-balaji-mandir.blogspot.com', '_blank');
+      }
       
       // Reset form
       setSignupData({
@@ -174,7 +180,7 @@ const SignUp = () => {
                       }
                     />
                     <Label htmlFor="newsletter" className="text-sm">
-                      Subscribe to newsletter for event updates
+                      Subscribe to newsletter for event updates (redirects to our blog)
                     </Label>
                   </div>
 
@@ -238,6 +244,11 @@ const SignUp = () => {
             </Card>
           </div>
         </div>
+      </div>
+
+      {/* Created by tag */}
+      <div className="fixed bottom-4 right-4 bg-primary/10 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-primary border border-primary/20 z-50">
+        Created by <strong>Karthikeya Ramarapu</strong>
       </div>
     </div>
   );

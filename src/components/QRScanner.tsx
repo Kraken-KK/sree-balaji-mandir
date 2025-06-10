@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QrReader } from 'react-qr-reader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,16 +12,43 @@ const QRScanner: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scannedTicket, setScannedTicket] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [lastScannedCode, setLastScannedCode] = useState<string>('');
   const { toast } = useToast();
 
+  // Set up real-time subscription to ticket updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('ticket-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'tickets'
+        },
+        (payload) => {
+          console.log('Real-time ticket update:', payload);
+          if (scannedTicket && payload.new.id === scannedTicket.id) {
+            setScannedTicket(payload.new);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [scannedTicket]);
+
   const handleScan = async (result: string | null) => {
-    if (!result || loading) return;
+    if (!result || loading || result === lastScannedCode) return;
 
     console.log('Scanned QR code:', result);
+    setLastScannedCode(result);
     setLoading(true);
     
     try {
-      // Find ticket by QR code
+      // Find ticket by QR code with fresh data
       const { data: ticket, error } = await supabase
         .from('tickets')
         .select(`
@@ -91,6 +118,27 @@ const QRScanner: React.FC = () => {
     try {
       console.log('Marking ticket as used:', scannedTicket.id);
       
+      // Use a transaction-like approach with optimistic locking
+      const { data: currentTicket, error: fetchError } = await supabase
+        .from('tickets')
+        .select('status')
+        .eq('id', scannedTicket.id)
+        .single();
+
+      if (fetchError) {
+        throw new Error('Failed to verify current ticket status');
+      }
+
+      if (currentTicket.status === 'used') {
+        toast({
+          title: "Ticket Already Used",
+          description: "This ticket has already been processed by another operator.",
+          variant: "destructive",
+        });
+        setScannedTicket({ ...scannedTicket, status: 'used' });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('tickets')
         .update({ 
@@ -98,6 +146,7 @@ const QRScanner: React.FC = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', scannedTicket.id)
+        .eq('status', 'active') // Only update if still active
         .select();
 
       console.log('Update result:', { data, error });
@@ -107,30 +156,41 @@ const QRScanner: React.FC = () => {
         throw error;
       }
 
+      if (!data || data.length === 0) {
+        throw new Error('Ticket status could not be updated - it may have been processed by another operator');
+      }
+
       toast({
-        title: "Ticket Processed",
+        title: "Ticket Processed Successfully",
         description: `Ticket ${scannedTicket.ticket_number} has been marked as used.`,
       });
 
       // Update the local state to reflect the change
       setScannedTicket({ ...scannedTicket, status: 'used' });
       
-      // Stop scanning after successful processing
+      // Reset scanner after successful processing
       setTimeout(() => {
         setScannedTicket(null);
         setIsScanning(false);
-      }, 2000);
+        setLastScannedCode('');
+      }, 3000);
 
     } catch (error) {
       console.error('Error updating ticket:', error);
       toast({
         title: "Update Error",
-        description: "Failed to update ticket status. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update ticket status. Please try again.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetScanner = () => {
+    setScannedTicket(null);
+    setLastScannedCode('');
+    setIsScanning(false);
   };
 
   return (
@@ -145,7 +205,7 @@ const QRScanner: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-2">
             <Button
               onClick={() => setIsScanning(!isScanning)}
               variant={isScanning ? "destructive" : "default"}
@@ -164,6 +224,17 @@ const QRScanner: React.FC = () => {
                 </>
               )}
             </Button>
+            
+            {(scannedTicket || lastScannedCode) && (
+              <Button
+                onClick={resetScanner}
+                variant="outline"
+                className="flex items-center gap-2"
+                size="lg"
+              >
+                Reset Scanner
+              </Button>
+            )}
           </div>
 
           {isScanning && (
@@ -213,7 +284,7 @@ const QRScanner: React.FC = () => {
               ) : (
                 <CheckCircle className="w-5 h-5" />
               )}
-              {scannedTicket.status === 'used' ? 'Ticket Already Used' : 'Valid Ticket Scanned'}
+              {scannedTicket.status === 'used' ? 'Ticket Used ✓' : 'Valid Ticket Scanned'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -236,7 +307,7 @@ const QRScanner: React.FC = () => {
                 <div>
                   <strong>Status:</strong>
                   <Badge variant={scannedTicket.status === 'used' ? 'destructive' : 'default'}>
-                    {scannedTicket.status}
+                    {scannedTicket.status === 'used' ? 'USED' : scannedTicket.status.toUpperCase()}
                   </Badge>
                 </div>
               </div>
@@ -252,6 +323,14 @@ const QRScanner: React.FC = () => {
                 >
                   {loading ? 'Processing...' : 'Mark as Used'}
                 </Button>
+              </div>
+            )}
+
+            {scannedTicket.status === 'used' && (
+              <div className="text-center pt-4">
+                <p className="text-sm text-muted-foreground">
+                  This ticket has been successfully processed and cannot be used again.
+                </p>
               </div>
             )}
           </CardContent>

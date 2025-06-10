@@ -1,480 +1,367 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { AdminCodeInput } from '@/components/AdminCodeInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { AdminEventManager } from '@/components/AdminEventManager';
-import { AdminServiceManager } from '@/components/AdminServiceManager';
-import { AdminGalleryManager } from '@/components/AdminGalleryManager';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Users, 
-  CreditCard, 
   Calendar, 
-  TrendingUp, 
-  DollarSign, 
-  Activity,
+  Image, 
   Settings,
-  Image as ImageIcon,
-  Activity as ActivityIcon
+  Ticket,
+  Eye,
+  Search,
+  Filter,
+  RefreshCw
 } from 'lucide-react';
-import QRScanner from '@/components/QRScanner';
+import AdminEventManager from '@/components/AdminEventManager';
+import AdminGalleryManager from '@/components/AdminGalleryManager';
+import AdminServiceManager from '@/components/AdminServiceManager';
+import AdminCodeInput from '@/components/AdminCodeInput';
 
 const AdminDashboard = () => {
-  const { user, checkAdminCode } = useAuth();
-  const { toast } = useToast();
-  const [isAdminVerified, setIsAdminVerified] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [adminCodeLoading, setAdminCodeLoading] = useState(false);
-
-  // Data states
-  const [users, setUsers] = useState([]);
-  const [payments, setPayments] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [services, setServices] = useState([]);
-  const [registrations, setRegistrations] = useState([]);
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [filteredTickets, setFilteredTickets] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (isAdminVerified) {
-      fetchAllData();
-      setupRealtimeSubscriptions();
-    } else {
-      setLoading(false);
-    }
-  }, [isAdminVerified]);
+    checkAdminAuth();
+  }, []);
 
-  const fetchAllData = async () => {
-    try {
-      setLoading(true);
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchTickets();
       
-      const [usersRes, paymentsRes, eventsRes, servicesRes, registrationsRes] = await Promise.all([
-        supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
-        supabase.from('payments').select('*').order('created_at', { ascending: false }),
-        supabase.from('events').select('*').order('created_at', { ascending: false }),
-        supabase.from('services').select('*').order('created_at', { ascending: false }),
-        supabase.from('event_registrations').select('*, events(name)').order('created_at', { ascending: false })
-      ]);
+      // Set up real-time subscription for tickets
+      const channel = supabase
+        .channel('admin-tickets')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'tickets'
+          },
+          () => {
+            fetchTickets();
+          }
+        )
+        .subscribe();
 
-      setUsers(usersRes.data || []);
-      setPayments(paymentsRes.data || []);
-      setEvents(eventsRes.data || []);
-      setServices(servicesRes.data || []);
-      setRegistrations(registrationsRes.data || []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    filterTickets();
+  }, [tickets, searchTerm, statusFilter]);
+
+  const checkAdminAuth = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Check if user has admin privileges (you can implement your own logic here)
+        setIsAuthenticated(true);
+      }
     } catch (error) {
-      console.error('Error fetching data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch dashboard data.",
-        variant: "destructive",
-      });
+      console.error('Auth check error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const setupRealtimeSubscriptions = () => {
-    const channels = [
-      supabase.channel('users-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'user_profiles' }, fetchAllData),
-      supabase.channel('payments-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, fetchAllData),
-      supabase.channel('events-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, fetchAllData),
-      supabase.channel('services-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, fetchAllData),
-      supabase.channel('registrations-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'event_registrations' }, fetchAllData)
-    ];
+  const fetchTickets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          services (name, category),
+          user_profiles (full_name)
+        `)
+        .order('created_at', { ascending: false });
 
-    channels.forEach(channel => channel.subscribe());
-
-    return () => channels.forEach(channel => supabase.removeChannel(channel));
+      if (error) throw error;
+      setTickets(data || []);
+    } catch (error) {
+      console.error('Error fetching tickets:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch tickets",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleAdminCodeSubmit = (code: string) => {
-    setAdminCodeLoading(true);
-    setTimeout(() => {
-      if (checkAdminCode(code)) {
-        setIsAdminVerified(true);
-        toast({
-          title: "Admin Access Granted",
-          description: "Welcome to the admin dashboard!",
-        });
-      } else {
-        toast({
-          title: "Invalid Admin Code",
-          description: "Please enter the correct admin code.",
-          variant: "destructive",
-        });
-      }
-      setAdminCodeLoading(false);
-    }, 1000);
+  const filterTickets = () => {
+    let filtered = tickets;
+
+    if (searchTerm) {
+      filtered = filtered.filter(ticket =>
+        ticket.ticket_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.customer_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ticket.services?.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(ticket => ticket.status === statusFilter);
+    }
+
+    setFilteredTickets(filtered);
   };
 
-  if (!isAdminVerified) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-        <Navbar />
-        <div className="container mx-auto px-4 py-8 md:py-16">
-          <AdminCodeInput onSubmit={handleAdminCodeSubmit} loading={adminCodeLoading} />
-        </div>
-      </div>
-    );
-  }
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'used':
+        return 'bg-red-100 text-red-800';
+      case 'expired':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-blue-100 text-blue-800';
+    }
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <RefreshCw className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="container mx-auto px-4 py-8 md:py-16">
-          <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
-            <p className="mt-4 text-lg">Loading dashboard data...</p>
+        <div className="container mx-auto px-4 py-12">
+          <div className="max-w-md mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle>Admin Access</CardTitle>
+                <CardDescription>Enter admin code to continue</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AdminCodeInput onSuccess={() => setIsAuthenticated(true)} />
+              </CardContent>
+            </Card>
           </div>
+        </div>
+        
+        {/* Created by tag */}
+        <div className="fixed bottom-4 right-4 bg-primary/10 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-primary border border-primary/20">
+          Created by <strong>Karthikeya Ramarapu</strong>
         </div>
       </div>
     );
   }
 
-  // Calculate statistics
-  const totalDonations = payments.filter(p => p.type === 'donation' && p.status === 'completed').reduce((sum, p) => sum + Number(p.amount), 0);
-  const totalServices = payments.filter(p => p.type === 'service' && p.status === 'completed').reduce((sum, p) => sum + Number(p.amount), 0);
-  const totalRevenue = totalDonations + totalServices;
-
-  // Chart data
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - i));
-    return date.toISOString().split('T')[0];
-  });
-
-  const dailyStats = last7Days.map(date => {
-    const dayPayments = payments.filter(p => p.created_at?.startsWith(date));
-    const dayRegistrations = registrations.filter(r => r.created_at?.startsWith(date));
-    return {
-      date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
-      payments: dayPayments.length,
-      registrations: dayRegistrations.length,
-      revenue: dayPayments.reduce((sum, p) => sum + Number(p.amount), 0)
-    };
-  });
-
-  const revenueData = [
-    { name: 'Donations', value: totalDonations, color: '#E0B020' },
-    { name: 'Services', value: totalServices, color: '#EC4899' }
-  ];
-
-  const statsCards = [
-    {
-      title: 'Total Users',
-      value: users.length.toString(),
-      change: '+12%',
-      icon: Users,
-      color: 'text-blue-600'
-    },
-    {
-      title: 'Total Revenue',
-      value: `₹${totalRevenue.toLocaleString()}`,
-      change: '+15%',
-      icon: DollarSign,
-      color: 'text-green-600'
-    },
-    {
-      title: 'Event Registrations',
-      value: registrations.length.toString(),
-      change: '+8%',
-      icon: Calendar,
-      color: 'text-purple-600'
-    },
-    {
-      title: 'Active Services',
-      value: services.length.toString(),
-      change: '0%',
-      icon: Settings,
-      color: 'text-orange-600'
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
+    <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="container mx-auto px-2 md:px-4 py-4 md:py-8 animate-fade-in">
-        {/* Header */}
-        <div className="mb-6 md:mb-8 animate-slide-up">
-          <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            Admin Dashboard
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm md:text-base">
-            Comprehensive temple management and analytics
-          </p>
+      <div className="container mx-auto px-4 py-6">
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Manage temple services, events, and tickets</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
-          {statsCards.map((stat, index) => (
-            <Card 
-              key={index} 
-              className="relative overflow-hidden hover:shadow-lg transition-all duration-300 hover-lift animate-scale-in"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <CardContent className="p-3 md:p-6">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
-                  <div className="w-full">
-                    <p className="text-xs md:text-sm text-muted-foreground">{stat.title}</p>
-                    <p className="text-lg md:text-3xl font-bold">{stat.value}</p>
-                    <p className="text-xs text-green-600 mt-1">{stat.change} from last month</p>
-                  </div>
-                  <div className={`p-2 md:p-3 rounded-full bg-muted/50 ${stat.color} mt-2 md:mt-0`}>
-                    <stat.icon className="w-4 h-4 md:w-6 md:h-6" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-          <Card className="col-span-1 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <CardHeader className="pb-2 md:pb-4">
-              <CardTitle className="flex items-center gap-2 text-sm md:text-base">
-                <TrendingUp className="w-4 h-4 md:w-5 md:h-5" />
-                Activity Trends
-              </CardTitle>
-              <CardDescription className="text-xs md:text-sm">Daily payments and registrations</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={dailyStats}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="payments" stackId="1" stroke="#E0B020" fill="#E0B020" fillOpacity={0.6} />
-                  <Area type="monotone" dataKey="registrations" stackId="1" stroke="#EC4899" fill="#EC4899" fillOpacity={0.6} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="col-span-1 animate-slide-up" style={{ animationDelay: '0.4s' }}>
-            <CardHeader className="pb-2 md:pb-4">
-              <CardTitle className="flex items-center gap-2 text-sm md:text-base">
-                <CreditCard className="w-4 h-4 md:w-5 md:h-5" />
-                Revenue Distribution
-              </CardTitle>
-              <CardDescription className="text-xs md:text-sm">Breakdown by source</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={revenueData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ₹${value.toLocaleString()}`}
-                    fontSize={10}
-                  >
-                    {revenueData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Mobile-optimized Tabs */}
-        <Tabs defaultValue="users" className="w-full animate-slide-up" style={{ animationDelay: '0.5s' }}>
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-7 gap-1 h-auto">
-            <TabsTrigger value="users" className="text-xs md:text-sm px-1 md:px-3">Users</TabsTrigger>
-            <TabsTrigger value="events" className="text-xs md:text-sm px-1 md:px-3">Events</TabsTrigger>
-            <TabsTrigger value="services" className="text-xs md:text-sm px-1 md:px-3">Services</TabsTrigger>
-            <TabsTrigger value="gallery" className="text-xs md:text-sm px-1 md:px-3">Gallery</TabsTrigger>
-            <TabsTrigger value="scanner" className="text-xs md:text-sm px-1 md:px-3">Scanner</TabsTrigger>
-            <TabsTrigger value="payments" className="text-xs md:text-sm px-1 md:px-3">Payments</TabsTrigger>
-            <TabsTrigger value="registrations" className="text-xs md:text-sm px-1 md:px-3">Registrations</TabsTrigger>
+        <Tabs defaultValue="tickets" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
+            <TabsTrigger value="tickets" className="flex items-center gap-2 text-xs md:text-sm">
+              <Ticket className="w-4 h-4" />
+              <span className="hidden sm:inline">Tickets</span>
+            </TabsTrigger>
+            <TabsTrigger value="events" className="flex items-center gap-2 text-xs md:text-sm">
+              <Calendar className="w-4 h-4" />
+              <span className="hidden sm:inline">Events</span>
+            </TabsTrigger>
+            <TabsTrigger value="gallery" className="flex items-center gap-2 text-xs md:text-sm">
+              <Image className="w-4 h-4" />
+              <span className="hidden sm:inline">Gallery</span>
+            </TabsTrigger>
+            <TabsTrigger value="services" className="flex items-center gap-2 text-xs md:text-sm">
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Services</span>
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-2 text-xs md:text-sm">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users">
+          <TabsContent value="tickets" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm md:text-base">
-                  <Users className="w-4 h-4 md:w-5 md:h-5" />
-                  Registered Users ({users.length})
+                <CardTitle className="flex items-center gap-2">
+                  <Ticket className="w-5 h-5" />
+                  Ticket Management
                 </CardTitle>
-                <CardDescription className="text-xs md:text-sm">All registered temple community members</CardDescription>
+                <CardDescription>
+                  View and manage all service tickets
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs md:text-sm">Name</TableHead>
-                        <TableHead className="text-xs md:text-sm hidden md:table-cell">Username</TableHead>
-                        <TableHead className="text-xs md:text-sm hidden md:table-cell">Phone</TableHead>
-                        <TableHead className="text-xs md:text-sm">Location</TableHead>
-                        <TableHead className="text-xs md:text-sm">Joined</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users.slice(0, 10).map((user: any) => (
-                        <TableRow key={user.id}>
-                          <TableCell className="font-medium text-xs md:text-sm">{user.full_name || 'N/A'}</TableCell>
-                          <TableCell className="text-xs md:text-sm hidden md:table-cell">{user.username || 'N/A'}</TableCell>
-                          <TableCell className="text-xs md:text-sm hidden md:table-cell">{user.phone || 'N/A'}</TableCell>
-                          <TableCell className="text-xs md:text-sm">{user.location || 'N/A'}</TableCell>
-                          <TableCell className="text-xs md:text-sm">{new Date(user.created_at).toLocaleDateString()}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+              <CardContent className="space-y-4">
+                {/* Search and Filter Controls */}
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <Label htmlFor="search">Search Tickets</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="search"
+                        placeholder="Search by ticket number, customer name, email..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="md:w-48">
+                    <Label htmlFor="status-filter">Filter by Status</Label>
+                    <select
+                      id="status-filter"
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-full p-2 border border-input rounded-md bg-background"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="active">Active</option>
+                      <option value="used">Used</option>
+                      <option value="expired">Expired</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <Button onClick={fetchTickets} variant="outline" size="sm">
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Tickets Grid */}
+                <div className="grid gap-4">
+                  {filteredTickets.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No tickets found matching your criteria
+                    </div>
+                  ) : (
+                    filteredTickets.map((ticket) => (
+                      <Card key={ticket.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                            <div>
+                              <p className="font-mono text-sm font-medium">{ticket.ticket_number}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(ticket.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{ticket.customer_name}</p>
+                              <p className="text-xs text-muted-foreground">{ticket.customer_email}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm">{ticket.services?.name}</p>
+                              <p className="text-xs text-muted-foreground capitalize">{ticket.services?.category}</p>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Badge className={`${getStatusColor(ticket.status)} text-xs`}>
+                                {ticket.status.toUpperCase()}
+                              </Badge>
+                              <Button variant="ghost" size="sm">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-bold">{tickets.length}</p>
+                      <p className="text-xs text-muted-foreground">Total Tickets</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-bold text-green-600">
+                        {tickets.filter(t => t.status === 'active').length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Active</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-bold text-red-600">
+                        {tickets.filter(t => t.status === 'used').length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Used</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-bold text-gray-600">
+                        {tickets.filter(t => t.status === 'expired').length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Expired</p>
+                    </CardContent>
+                  </Card>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="events">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm md:text-base">Event Management</CardTitle>
-                <CardDescription className="text-xs md:text-sm">Create and manage temple events</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AdminEventManager />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="services">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm md:text-base">Service Management</CardTitle>
-                <CardDescription className="text-xs md:text-sm">Create and manage temple services</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AdminServiceManager />
-              </CardContent>
-            </Card>
+            <AdminEventManager />
           </TabsContent>
 
           <TabsContent value="gallery">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm md:text-base">
-                  <ImageIcon className="w-4 h-4 md:w-5 md:h-5" />
-                  Gallery Management
-                </CardTitle>
-                <CardDescription className="text-xs md:text-sm">Upload and manage temple gallery images</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AdminGalleryManager />
-              </CardContent>
-            </Card>
+            <AdminGalleryManager />
           </TabsContent>
 
-          <TabsContent value="scanner">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm md:text-base">
-                  <ActivityIcon className="w-4 h-4 md:w-5 md:h-5" />
-                  Ticket QR Scanner
-                </CardTitle>
-                <CardDescription className="text-xs md:text-sm">Scan and verify service tickets</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <QRScanner />
-              </CardContent>
-            </Card>
+          <TabsContent value="services">
+            <AdminServiceManager />
           </TabsContent>
 
-          <TabsContent value="payments">
+          <TabsContent value="users">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm md:text-base">
-                  <CreditCard className="w-4 h-4 md:w-5 md:h-5" />
-                  Payment History ({payments.length})
-                </CardTitle>
-                <CardDescription className="text-xs md:text-sm">Real-time payment transactions</CardDescription>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>Manage registered users</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs md:text-sm">Customer</TableHead>
-                        <TableHead className="text-xs md:text-sm">Type</TableHead>
-                        <TableHead className="text-xs md:text-sm">Amount</TableHead>
-                        <TableHead className="text-xs md:text-sm hidden md:table-cell">Status</TableHead>
-                        <TableHead className="text-xs md:text-sm">Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {payments.slice(0, 10).map((payment: any) => (
-                        <TableRow key={payment.id}>
-                          <TableCell className="font-medium text-xs md:text-sm">{payment.customer_name || 'Anonymous'}</TableCell>
-                          <TableCell className="text-xs md:text-sm">
-                            <Badge variant="outline" className="text-xs">{payment.type}</Badge>
-                          </TableCell>
-                          <TableCell className="text-xs md:text-sm">₹{Number(payment.amount).toLocaleString()}</TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <Badge variant={
-                              payment.status === 'completed' ? 'default' :
-                              payment.status === 'pending' ? 'secondary' : 'destructive'
-                            } className="text-xs">
-                              {payment.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs md:text-sm">{new Date(payment.created_at).toLocaleDateString()}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="registrations">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm md:text-base">
-                  <Calendar className="w-4 h-4 md:w-5 md:h-5" />
-                  Event Registrations ({registrations.length})
-                </CardTitle>
-                <CardDescription className="text-xs md:text-sm">Live event registration data</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs md:text-sm">Event</TableHead>
-                        <TableHead className="text-xs md:text-sm">Members</TableHead>
-                        <TableHead className="text-xs md:text-sm">Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {registrations.slice(0, 10).map((reg: any) => (
-                        <TableRow key={reg.id}>
-                          <TableCell className="font-medium text-xs md:text-sm">{reg.events?.name || 'Unknown Event'}</TableCell>
-                          <TableCell className="text-xs md:text-sm">{reg.member_count}</TableCell>
-                          <TableCell className="text-xs md:text-sm">{new Date(reg.created_at).toLocaleDateString()}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <p className="text-muted-foreground">User management features coming soon...</p>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
+      </div>
+
+      {/* Created by tag */}
+      <div className="fixed bottom-4 right-4 bg-primary/10 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-primary border border-primary/20 z-50">
+        Created by <strong>Karthikeya Ramarapu</strong>
       </div>
     </div>
   );

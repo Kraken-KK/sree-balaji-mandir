@@ -135,8 +135,8 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
+      <Card className="w-full max-w-md animate-fade-in">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">
             {isSignUp ? 'Create Account' : 'Welcome Back'}
@@ -154,7 +154,7 @@ const Auth = () => {
           <Button
             onClick={handleGoogleAuth}
             variant="outline"
-            className="w-full"
+            className="w-full hover-scale"
             disabled={loading}
           >
             <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
@@ -252,7 +252,7 @@ const Auth = () => {
                   </div>
                 )}
 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full hover-scale" disabled={loading}>
                   {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')}
                 </Button>
               </form>
@@ -311,7 +311,7 @@ const Auth = () => {
                   </div>
                 )}
 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full hover-scale" disabled={loading}>
                   {loading ? 'Processing...' : (otpSent ? 'Verify OTP' : 'Send OTP')}
                 </Button>
               </form>
@@ -334,6 +334,11 @@ const Auth = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Created by tag */}
+      <div className="fixed bottom-4 right-4 bg-primary/10 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-primary border border-primary/20 z-50">
+        Created by <strong>Karthikeya Ramarapu</strong>
+      </div>
     </div>
   );
 };
