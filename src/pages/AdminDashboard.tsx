@@ -26,6 +26,7 @@ import { AdminGalleryManager } from '@/components/AdminGalleryManager';
 import { AdminServiceManager } from '@/components/AdminServiceManager';
 import { AdminCodeInput } from '@/components/AdminCodeInput';
 import QRScanner from '@/components/QRScanner';
+import { AdminAnalytics } from '@/components/AdminAnalytics';
 
 const AdminDashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -184,8 +185,12 @@ const AdminDashboard = () => {
           <p className="text-muted-foreground">Manage temple services, events, and tickets</p>
         </div>
 
-        <Tabs defaultValue="tickets" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 gap-2">
+        <Tabs defaultValue="analytics" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-7 gap-2">
+            <TabsTrigger value="analytics" className="flex items-center gap-2 text-xs md:text-sm">
+              <Ticket className="w-4 h-4" />
+              <span className="hidden sm:inline">Analytics</span>
+            </TabsTrigger>
             <TabsTrigger value="tickets" className="flex items-center gap-2 text-xs md:text-sm">
               <Ticket className="w-4 h-4" />
               <span className="hidden sm:inline">Tickets</span>
@@ -211,6 +216,10 @@ const AdminDashboard = () => {
               <span className="hidden sm:inline">QR Scanner</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="analytics">
+            <AdminAnalytics />
+          </TabsContent>
 
           <TabsContent value="tickets" className="space-y-6">
             <Card>
@@ -377,3 +386,5 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
+}
