@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, Camera, CameraOff, Scan } from 'lucide-react';
+import { CheckCircle, XCircle, Camera, CameraOff, Scan, RotateCcw } from 'lucide-react';
 
 const QRScanner: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
@@ -14,8 +14,6 @@ const QRScanner: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [lastScannedCode, setLastScannedCode] = useState<string>('');
   const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('environment');
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const { toast } = useToast();
 
   // Set up real-time subscription to ticket updates
@@ -43,21 +41,6 @@ const QRScanner: React.FC = () => {
     };
   }, [scannedTicket]);
 
-  useEffect(() => {
-    navigator.mediaDevices.enumerateDevices().then((deviceInfos) => {
-      const videoDevices = deviceInfos.filter((device) => device.kind === 'videoinput');
-      setDevices(videoDevices);
-      if (videoDevices.length > 0) {
-        setSelectedDeviceId(videoDevices[0].deviceId);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    console.log('Available video devices:', devices);
-    console.log('Selected device ID:', selectedDeviceId);
-  }, [devices, selectedDeviceId]);
-
   const handleScan = async (result: string | null) => {
     if (!result || loading || result === lastScannedCode) return;
 
@@ -71,7 +54,7 @@ const QRScanner: React.FC = () => {
         .from('tickets')
         .select(`
           *,
-          services (name)
+          services (name, price)
         `)
         .eq('qr_code', result)
         .single();
@@ -213,21 +196,24 @@ const QRScanner: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="animate-fade-in hover-lift">
+      <Card className="bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-all duration-300">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-              <Scan className="w-5 h-5 text-primary" />
+          <CardTitle className="flex items-center gap-3 text-white">
+            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+              <Scan className="w-5 h-5 text-white" />
             </div>
             QR Code Scanner
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex justify-center gap-2">
+        <CardContent className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Button
               onClick={() => setIsScanning(!isScanning)}
-              variant={isScanning ? "destructive" : "default"}
-              className="flex items-center gap-2 hover-scale transition-all duration-300"
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                isScanning 
+                  ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600' 
+                  : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
+              }`}
               size="lg"
             >
               {isScanning ? (
@@ -247,17 +233,18 @@ const QRScanner: React.FC = () => {
               <Button
                 onClick={resetScanner}
                 variant="outline"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold bg-white/10 border-white/20 text-white hover:bg-white/20"
                 size="lg"
               >
+                <RotateCcw className="w-5 h-5" />
                 Reset Scanner
               </Button>
             )}
           </div>
 
           {isScanning && (
-            <div className="w-full max-w-sm mx-auto animate-scale-in">
-              <div className="relative">
+            <div className="w-full max-w-md mx-auto">
+              <div className="relative rounded-2xl overflow-hidden bg-black/20 backdrop-blur-sm border border-white/10">
                 <QrReader
                   onResult={(result, error) => {
                     if (result) {
@@ -269,18 +256,17 @@ const QRScanner: React.FC = () => {
                   }}
                   constraints={{
                     facingMode: cameraFacingMode,
-                    deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
                   }}
-                  className="w-full rounded-lg overflow-hidden"
+                  className="w-full"
                 />
-                <div className="absolute inset-0 border-2 border-primary rounded-lg pointer-events-none">
-                  <div className="absolute top-2 left-2 w-6 h-6 border-l-4 border-t-4 border-primary rounded-tl-lg"></div>
-                  <div className="absolute top-2 right-2 w-6 h-6 border-r-4 border-t-4 border-primary rounded-tr-lg"></div>
-                  <div className="absolute bottom-2 left-2 w-6 h-6 border-l-4 border-b-4 border-primary rounded-bl-lg"></div>
-                  <div className="absolute bottom-2 right-2 w-6 h-6 border-r-4 border-b-4 border-primary rounded-br-lg"></div>
+                <div className="absolute inset-4 border-2 border-white/30 rounded-xl pointer-events-none">
+                  <div className="absolute top-0 left-0 w-6 h-6 border-l-4 border-t-4 border-white rounded-tl-lg"></div>
+                  <div className="absolute top-0 right-0 w-6 h-6 border-r-4 border-t-4 border-white rounded-tr-lg"></div>
+                  <div className="absolute bottom-0 left-0 w-6 h-6 border-l-4 border-b-4 border-white rounded-bl-lg"></div>
+                  <div className="absolute bottom-0 right-0 w-6 h-6 border-r-4 border-b-4 border-white rounded-br-lg"></div>
                 </div>
               </div>
-              <p className="text-center text-sm text-muted-foreground mt-2">
+              <p className="text-center text-sm text-gray-300 mt-4">
                 Point camera at QR code to scan
               </p>
             </div>
@@ -291,7 +277,7 @@ const QRScanner: React.FC = () => {
               <Button
                 onClick={() => setCameraFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))}
                 variant="outline"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl"
                 size="lg"
               >
                 <Camera className="w-5 h-5" />
@@ -299,65 +285,52 @@ const QRScanner: React.FC = () => {
               </Button>
             </div>
           )}
-
-          {devices.length > 0 && (
-            <div className="flex justify-center gap-2">
-              <select
-                value={selectedDeviceId}
-                onChange={(e) => setSelectedDeviceId(e.target.value)}
-                className="border rounded px-2 py-1"
-              >
-                {devices.map((device) => (
-                  <option key={device.deviceId} value={device.deviceId}>
-                    {device.label || `Camera ${device.deviceId}`}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </CardContent>
       </Card>
 
       {scannedTicket && (
-        <Card className={`animate-scale-in hover-lift ${
+        <Card className={`bg-white/5 backdrop-blur-md border transition-all duration-300 ${
           scannedTicket.status === 'used' 
-            ? 'border-red-200 bg-red-50' 
-            : 'border-green-200 bg-green-50'
+            ? 'border-red-500/50 bg-red-500/10' 
+            : 'border-green-500/50 bg-green-500/10'
         }`}>
           <CardHeader>
-            <CardTitle className={`flex items-center gap-2 ${
+            <CardTitle className={`flex items-center gap-3 ${
               scannedTicket.status === 'used' 
-                ? 'text-red-700' 
-                : 'text-green-700'
+                ? 'text-red-400' 
+                : 'text-green-400'
             }`}>
               {scannedTicket.status === 'used' ? (
-                <XCircle className="w-5 h-5" />
+                <XCircle className="w-6 h-6" />
               ) : (
-                <CheckCircle className="w-5 h-5" />
+                <CheckCircle className="w-6 h-6" />
               )}
               {scannedTicket.status === 'used' ? 'Ticket Used ✓' : 'Valid Ticket Scanned'}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div className="space-y-2">
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
                 <div>
-                  <strong>Ticket Number:</strong>
-                  <p className="font-mono text-lg">{scannedTicket.ticket_number}</p>
+                  <label className="text-sm font-medium text-gray-300">Ticket Number</label>
+                  <p className="font-mono text-xl font-bold text-white">{scannedTicket.ticket_number}</p>
                 </div>
                 <div>
-                  <strong>Customer:</strong>
-                  <p>{scannedTicket.customer_name}</p>
+                  <label className="text-sm font-medium text-gray-300">Customer</label>
+                  <p className="text-white">{scannedTicket.customer_name}</p>
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div>
-                  <strong>Service:</strong>
-                  <p>{scannedTicket.services?.name}</p>
+                  <label className="text-sm font-medium text-gray-300">Service</label>
+                  <p className="text-white">{scannedTicket.services?.name || 'N/A'}</p>
                 </div>
                 <div>
-                  <strong>Status:</strong>
-                  <Badge variant={scannedTicket.status === 'used' ? 'destructive' : 'default'}>
+                  <label className="text-sm font-medium text-gray-300">Status</label>
+                  <Badge 
+                    variant={scannedTicket.status === 'used' ? 'destructive' : 'default'}
+                    className="font-semibold"
+                  >
                     {scannedTicket.status === 'used' ? 'USED' : scannedTicket.status.toUpperCase()}
                   </Badge>
                 </div>
@@ -369,7 +342,7 @@ const QRScanner: React.FC = () => {
                 <Button
                   onClick={markTicketAsUsed}
                   disabled={loading}
-                  className="bg-green-600 hover:bg-green-700 hover-scale"
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-8 py-3 rounded-xl font-semibold"
                   size="lg"
                 >
                   {loading ? 'Processing...' : 'Mark as Used'}
@@ -379,7 +352,7 @@ const QRScanner: React.FC = () => {
 
             {scannedTicket.status === 'used' && (
               <div className="text-center pt-4">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-gray-300">
                   This ticket has been successfully processed and cannot be used again.
                 </p>
               </div>

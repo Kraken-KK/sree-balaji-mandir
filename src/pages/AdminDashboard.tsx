@@ -1,386 +1,317 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Navbar from '@/components/Navbar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
+  BarChart3, 
   Users, 
-  Calendar, 
-  Image, 
-  Settings,
-  Ticket,
-  Eye,
-  Search,
-  Filter,
-  RefreshCw,
-  Scan
+  QrCode, 
+  Settings, 
+  Calendar,
+  Image,
+  CreditCard,
+  Activity,
+  ShieldCheck,
+  Menu,
+  X
 } from 'lucide-react';
-import { AdminEventManager } from '@/components/AdminEventManager';
-import { AdminGalleryManager } from '@/components/AdminGalleryManager';
-import { AdminServiceManager } from '@/components/AdminServiceManager';
 import { AdminCodeInput } from '@/components/AdminCodeInput';
-import QRScanner from '@/components/QRScanner';
 import { AdminAnalytics } from '@/components/AdminAnalytics';
+import { AdminEventManager } from '@/components/AdminEventManager';
+import QRScanner from '@/components/QRScanner';
+
+interface TicketData {
+  id: string;
+  ticket_number: string;
+  customer_name: string;
+  customer_email: string;
+  status: string;
+  created_at: string;
+  services: {
+    name: string;
+    price: number;
+  } | null;
+}
 
 const AdminDashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [filteredTickets, setFilteredTickets] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState('analytics');
+  const [tickets, setTickets] = useState<TicketData[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    checkAdminAuth();
-  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchTickets();
-      
-      // Set up real-time subscription for tickets
-      const channel = supabase
-        .channel('admin-tickets')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'tickets'
-          },
-          () => {
-            fetchTickets();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
+      fetchAllTickets();
     }
   }, [isAuthenticated]);
 
-  useEffect(() => {
-    filterTickets();
-  }, [tickets, searchTerm, statusFilter]);
-
-  const checkAdminAuth = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // Check if user has admin privileges (you can implement your own logic here)
-        setIsAuthenticated(true);
-      }
-    } catch (error) {
-      console.error('Auth check error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchTickets = async () => {
+  const fetchAllTickets = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('tickets')
         .select(`
           *,
-          services (name, category),
-          user_profiles (full_name)
+          services (name, price)
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching tickets:', error);
+        throw error;
+      }
+
       setTickets(data || []);
     } catch (error) {
       console.error('Error fetching tickets:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch tickets",
+        description: "Failed to fetch tickets. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const filterTickets = () => {
-    let filtered = tickets;
-
-    if (searchTerm) {
-      filtered = filtered.filter(ticket =>
-        ticket.ticket_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ticket.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ticket.customer_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ticket.services?.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(ticket => ticket.status === statusFilter);
-    }
-
-    setFilteredTickets(filtered);
+  const handleAuthentication = () => {
+    setIsAuthenticated(true);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'used':
-        return 'bg-red-100 text-red-800';
-      case 'expired':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-blue-100 text-blue-800';
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <RefreshCw className="w-8 h-8 animate-spin" />
-      </div>
-    );
-  }
+  const menuItems = [
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, color: 'from-blue-500 to-cyan-500' },
+    { id: 'scanner', label: 'QR Scanner', icon: QrCode, color: 'from-green-500 to-emerald-500' },
+    { id: 'tickets', label: 'Tickets', icon: CreditCard, color: 'from-purple-500 to-violet-500' },
+    { id: 'events', label: 'Events', icon: Calendar, color: 'from-orange-500 to-red-500' },
+  ];
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="container mx-auto px-4 py-12">
-          <div className="max-w-md mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle>Admin Access</CardTitle>
-                <CardDescription>Enter admin code to continue</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AdminCodeInput onSuccess={() => setIsAuthenticated(true)} />
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-        
-        {/* Created by tag */}
-        <div className="fixed bottom-4 right-4 bg-primary/10 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-primary border border-primary/20">
-          Created by <strong>Karthikeya Ramarapu</strong>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <AdminCodeInput onSuccess={handleAuthentication} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      
-      <div className="container mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage temple services, events, and tickets</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-black/20 backdrop-blur-md border-b border-white/10 p-4 sticky top-0 z-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-white" />
+            </div>
+            <h1 className="text-white font-bold text-lg">Admin Dashboard</h1>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="text-white hover:bg-white/10"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </Button>
         </div>
-
-        <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-7 gap-2">
-            <TabsTrigger value="analytics" className="flex items-center gap-2 text-xs md:text-sm">
-              <Ticket className="w-4 h-4" />
-              <span className="hidden sm:inline">Analytics</span>
-            </TabsTrigger>
-            <TabsTrigger value="tickets" className="flex items-center gap-2 text-xs md:text-sm">
-              <Ticket className="w-4 h-4" />
-              <span className="hidden sm:inline">Tickets</span>
-            </TabsTrigger>
-            <TabsTrigger value="events" className="flex items-center gap-2 text-xs md:text-sm">
-              <Calendar className="w-4 h-4" />
-              <span className="hidden sm:inline">Events</span>
-            </TabsTrigger>
-            <TabsTrigger value="gallery" className="flex items-center gap-2 text-xs md:text-sm">
-              <Image className="w-4 h-4" />
-              <span className="hidden sm:inline">Gallery</span>
-            </TabsTrigger>
-            <TabsTrigger value="services" className="flex items-center gap-2 text-xs md:text-sm">
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Services</span>
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2 text-xs md:text-sm">
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Users</span>
-            </TabsTrigger>
-            <TabsTrigger value="qr-scanner" className="flex items-center gap-2 text-xs md:text-sm">
-              <Scan className="w-4 h-4" />
-              <span className="hidden sm:inline">QR Scanner</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="analytics">
-            <AdminAnalytics />
-          </TabsContent>
-
-          <TabsContent value="tickets" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Ticket className="w-5 h-5" />
-                  Ticket Management
-                </CardTitle>
-                <CardDescription>
-                  View and manage all service tickets
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Search and Filter Controls */}
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1">
-                    <Label htmlFor="search">Search Tickets</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="search"
-                        placeholder="Search by ticket number, customer name, email..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  <div className="md:w-48">
-                    <Label htmlFor="status-filter">Filter by Status</Label>
-                    <select
-                      id="status-filter"
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full p-2 border border-input rounded-md bg-background"
-                    >
-                      <option value="all">All Statuses</option>
-                      <option value="active">Active</option>
-                      <option value="used">Used</option>
-                      <option value="expired">Expired</option>
-                    </select>
-                  </div>
-                  <div className="flex items-end">
-                    <Button onClick={fetchTickets} variant="outline" size="sm">
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Refresh
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Tickets Grid */}
-                <div className="grid gap-4">
-                  {filteredTickets.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No tickets found matching your criteria
-                    </div>
-                  ) : (
-                    filteredTickets.map((ticket) => (
-                      <Card key={ticket.id} className="hover:shadow-md transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                            <div>
-                              <p className="font-mono text-sm font-medium">{ticket.ticket_number}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(ticket.created_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm">{ticket.customer_name}</p>
-                              <p className="text-xs text-muted-foreground">{ticket.customer_email}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm">{ticket.services?.name}</p>
-                              <p className="text-xs text-muted-foreground capitalize">{ticket.services?.category}</p>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <Badge className={`${getStatusColor(ticket.status)} text-xs`}>
-                                {ticket.status.toUpperCase()}
-                              </Badge>
-                              <Button variant="ghost" size="sm">
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
-                </div>
-
-                {/* Summary Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-2xl font-bold">{tickets.length}</p>
-                      <p className="text-xs text-muted-foreground">Total Tickets</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-2xl font-bold text-green-600">
-                        {tickets.filter(t => t.status === 'active').length}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Active</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-2xl font-bold text-red-600">
-                        {tickets.filter(t => t.status === 'used').length}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Used</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-2xl font-bold text-gray-600">
-                        {tickets.filter(t => t.status === 'expired').length}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Expired</p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="events">
-            <AdminEventManager />
-          </TabsContent>
-
-          <TabsContent value="gallery">
-            <AdminGalleryManager />
-          </TabsContent>
-
-          <TabsContent value="services">
-            <AdminServiceManager />
-          </TabsContent>
-
-          <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>Manage registered users</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">User management features coming soon...</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="qr-scanner" className="space-y-6">
-            <QRScanner />
-          </TabsContent>
-        </Tabs>
       </div>
 
-      {/* Created by tag */}
-      <div className="fixed bottom-4 right-4 bg-primary/10 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-primary border border-primary/20 z-50">
-        Created by <strong>Karthikeya Ramarapu</strong>
+      <div className="flex">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block w-80 p-6 space-y-4">
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+                <ShieldCheck className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-white font-bold text-xl">Admin Control</h1>
+                <p className="text-gray-400 text-sm">Management Dashboard</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {menuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full group relative overflow-hidden rounded-2xl p-4 transition-all duration-300 ${
+                  activeTab === item.id
+                    ? 'bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl'
+                    : 'bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-white/20'
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${item.color} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                    <item.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-white font-semibold">{item.label}</h3>
+                    <p className="text-gray-400 text-sm">Manage {item.label.toLowerCase()}</p>
+                  </div>
+                </div>
+                {activeTab === item.id && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm">
+            <div className="bg-slate-900/95 backdrop-blur-md w-80 h-full p-6 space-y-4 border-r border-white/10">
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                {menuItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`group relative overflow-hidden rounded-2xl p-4 transition-all duration-300 ${
+                      activeTab === item.id
+                        ? 'bg-white/10 backdrop-blur-md border border-white/20'
+                        : 'bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-r ${item.color} flex items-center justify-center`}>
+                        <item.icon className="w-5 h-5 text-white" />
+                      </div>
+                      <span className="text-white text-sm font-medium">{item.label}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content */}
+        <div className="flex-1 p-4 lg:p-8 overflow-auto">
+          <div className="max-w-7xl mx-auto">
+            {activeTab === 'analytics' && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">Analytics Dashboard</h2>
+                    <p className="text-gray-400">Real-time insights and data visualization</p>
+                  </div>
+                </div>
+                <AdminAnalytics />
+              </div>
+            )}
+
+            {activeTab === 'scanner' && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
+                    <QrCode className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">QR Code Scanner</h2>
+                    <p className="text-gray-400">Scan and verify tickets</p>
+                  </div>
+                </div>
+                <QRScanner />
+              </div>
+            )}
+
+            {activeTab === 'tickets' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-purple-500 to-violet-500 flex items-center justify-center">
+                      <CreditCard className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">Ticket Management</h2>
+                      <p className="text-gray-400">View and manage all tickets</p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={fetchAllTickets} 
+                    disabled={loading}
+                    className="bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600"
+                  >
+                    {loading ? 'Loading...' : 'Refresh'}
+                  </Button>
+                </div>
+
+                <div className="grid gap-4">
+                  {tickets.map((ticket) => (
+                    <Card key={ticket.id} className="bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-all duration-300">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center gap-3">
+                              <span className="font-mono text-white font-bold">{ticket.ticket_number}</span>
+                              <Badge 
+                                variant={ticket.status === 'active' ? 'default' : ticket.status === 'used' ? 'destructive' : 'secondary'}
+                                className="capitalize"
+                              >
+                                {ticket.status}
+                              </Badge>
+                            </div>
+                            <div className="text-gray-300">
+                              <p><strong>Customer:</strong> {ticket.customer_name}</p>
+                              <p><strong>Email:</strong> {ticket.customer_email}</p>
+                              <p><strong>Service:</strong> {ticket.services?.name || 'N/A'}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-white">₹{ticket.services?.price || 0}</p>
+                            <p className="text-gray-400 text-sm">{new Date(ticket.created_at).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {tickets.length === 0 && !loading && (
+                  <Card className="bg-white/5 backdrop-blur-md border border-white/10">
+                    <CardContent className="p-12 text-center">
+                      <CreditCard className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-white mb-2">No Tickets Found</h3>
+                      <p className="text-gray-400">No tickets have been created yet.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'events' && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">Event Management</h2>
+                    <p className="text-gray-400">Create and manage events</p>
+                  </div>
+                </div>
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
+                  <AdminEventManager />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

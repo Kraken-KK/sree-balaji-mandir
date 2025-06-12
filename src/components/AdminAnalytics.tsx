@@ -97,7 +97,7 @@ export const AdminAnalytics = () => {
 
   const fetchAnalytics = async () => {
     try {
-      // Fetch tickets with services data
+      // Fetch ALL tickets regardless of user - this is for admin global view
       const { data: tickets, error: ticketsError } = await supabase
         .from('tickets')
         .select(`
@@ -107,7 +107,7 @@ export const AdminAnalytics = () => {
 
       if (ticketsError) throw ticketsError;
 
-      // Calculate basic stats
+      // Calculate basic stats for ALL tickets
       const totalTickets = tickets?.length || 0;
       const activeTickets = tickets?.filter(t => t.status === 'active').length || 0;
       const usedTickets = tickets?.filter(t => t.status === 'used').length || 0;
@@ -205,7 +205,7 @@ export const AdminAnalytics = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+        <RefreshCw className="w-8 h-8 animate-spin text-white" />
       </div>
     );
   }
@@ -213,11 +213,12 @@ export const AdminAnalytics = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold">Analytics Dashboard</h3>
-          <p className="text-muted-foreground">Live data visualization and insights</p>
-        </div>
-        <Button onClick={fetchAnalytics} variant="outline" size="sm">
+        <Button 
+          onClick={fetchAnalytics} 
+          variant="outline" 
+          size="sm"
+          className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+        >
           <RefreshCw className="w-4 h-4 mr-2" />
           Refresh
         </Button>
@@ -225,50 +226,50 @@ export const AdminAnalytics = () => {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 backdrop-blur-md">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-600">Total Tickets</p>
-                <p className="text-3xl font-bold text-blue-900">{analytics.totalTickets}</p>
+                <p className="text-sm font-medium text-blue-200">Total Tickets</p>
+                <p className="text-3xl font-bold text-white">{analytics.totalTickets}</p>
               </div>
-              <Activity className="w-8 h-8 text-blue-600" />
+              <Activity className="w-8 h-8 text-blue-400" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <Card className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 backdrop-blur-md">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-600">Active Tickets</p>
-                <p className="text-3xl font-bold text-green-900">{analytics.activeTickets}</p>
+                <p className="text-sm font-medium text-green-200">Active Tickets</p>
+                <p className="text-3xl font-bold text-white">{analytics.activeTickets}</p>
               </div>
-              <Users className="w-8 h-8 text-green-600" />
+              <Users className="w-8 h-8 text-green-400" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <Card className="bg-gradient-to-br from-purple-500/20 to-violet-500/20 border border-purple-500/30 backdrop-blur-md">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-600">Total Revenue</p>
-                <p className="text-3xl font-bold text-purple-900">₹{analytics.totalRevenue.toLocaleString()}</p>
+                <p className="text-sm font-medium text-purple-200">Total Revenue</p>
+                <p className="text-3xl font-bold text-white">₹{analytics.totalRevenue.toLocaleString()}</p>
               </div>
-              <CreditCard className="w-8 h-8 text-purple-600" />
+              <CreditCard className="w-8 h-8 text-purple-400" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+        <Card className="bg-gradient-to-br from-orange-500/20 to-red-500/20 border border-orange-500/30 backdrop-blur-md">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-orange-600">Used Tickets</p>
-                <p className="text-3xl font-bold text-orange-900">{analytics.usedTickets}</p>
+                <p className="text-sm font-medium text-orange-200">Used Tickets</p>
+                <p className="text-3xl font-bold text-white">{analytics.usedTickets}</p>
               </div>
-              <Calendar className="w-8 h-8 text-orange-600" />
+              <Calendar className="w-8 h-8 text-orange-400" />
             </div>
           </CardContent>
         </Card>
@@ -277,21 +278,21 @@ export const AdminAnalytics = () => {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Monthly Tickets Chart */}
-        <Card>
+        <Card className="bg-white/5 backdrop-blur-md border border-white/10">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-white">
               <BarChart3 className="w-5 h-5" />
               Monthly Tickets & Revenue
             </CardTitle>
-            <CardDescription>Tickets and revenue trends over the last 6 months</CardDescription>
+            <CardDescription className="text-gray-300">Tickets and revenue trends over the last 6 months</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={analytics.monthlyTickets}>
-                  <XAxis dataKey="month" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
+                  <XAxis dataKey="month" stroke="#fff" />
+                  <YAxis yAxisId="left" stroke="#fff" />
+                  <YAxis yAxisId="right" orientation="right" stroke="#fff" />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar yAxisId="left" dataKey="count" fill="var(--color-tickets)" name="Tickets" />
                   <Bar yAxisId="right" dataKey="revenue" fill="var(--color-revenue)" name="Revenue (₹)" />
@@ -302,13 +303,13 @@ export const AdminAnalytics = () => {
         </Card>
 
         {/* Service Breakdown */}
-        <Card>
+        <Card className="bg-white/5 backdrop-blur-md border border-white/10">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-white">
               <PieChartIcon className="w-5 h-5" />
               Service Distribution
             </CardTitle>
-            <CardDescription>Breakdown of tickets by service type</CardDescription>
+            <CardDescription className="text-gray-300">Breakdown of tickets by service type</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-80 w-full">
@@ -336,20 +337,20 @@ export const AdminAnalytics = () => {
       </div>
 
       {/* Recent Activity */}
-      <Card>
+      <Card className="bg-white/5 backdrop-blur-md border border-white/10">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-white">
             <TrendingUp className="w-5 h-5" />
             Recent Activity (Last 7 Days)
           </CardTitle>
-          <CardDescription>Daily ticket creation trends</CardDescription>
+          <CardDescription className="text-gray-300">Daily ticket creation trends</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-60 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={analytics.recentActivity}>
-                <XAxis dataKey="date" />
-                <YAxis />
+                <XAxis dataKey="date" stroke="#fff" />
+                <YAxis stroke="#fff" />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Area 
                   type="monotone" 
@@ -367,31 +368,31 @@ export const AdminAnalytics = () => {
 
       {/* Status Distribution */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-green-200">
+        <Card className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 backdrop-blur-md">
           <CardContent className="p-6 text-center">
-            <div className="text-3xl font-bold text-green-600 mb-2">{analytics.activeTickets}</div>
-            <div className="text-sm text-green-600 font-medium">Active Tickets</div>
-            <div className="text-xs text-muted-foreground mt-1">
+            <div className="text-3xl font-bold text-green-400 mb-2">{analytics.activeTickets}</div>
+            <div className="text-sm text-green-200 font-medium">Active Tickets</div>
+            <div className="text-xs text-gray-300 mt-1">
               {analytics.totalTickets > 0 ? Math.round((analytics.activeTickets / analytics.totalTickets) * 100) : 0}% of total
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-red-200">
+        <Card className="bg-gradient-to-br from-red-500/20 to-pink-500/20 border border-red-500/30 backdrop-blur-md">
           <CardContent className="p-6 text-center">
-            <div className="text-3xl font-bold text-red-600 mb-2">{analytics.usedTickets}</div>
-            <div className="text-sm text-red-600 font-medium">Used Tickets</div>
-            <div className="text-xs text-muted-foreground mt-1">
+            <div className="text-3xl font-bold text-red-400 mb-2">{analytics.usedTickets}</div>
+            <div className="text-sm text-red-200 font-medium">Used Tickets</div>
+            <div className="text-xs text-gray-300 mt-1">
               {analytics.totalTickets > 0 ? Math.round((analytics.usedTickets / analytics.totalTickets) * 100) : 0}% of total
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200">
+        <Card className="bg-gradient-to-br from-gray-500/20 to-slate-500/20 border border-gray-500/30 backdrop-blur-md">
           <CardContent className="p-6 text-center">
-            <div className="text-3xl font-bold text-gray-600 mb-2">{analytics.expiredTickets}</div>
-            <div className="text-sm text-gray-600 font-medium">Expired Tickets</div>
-            <div className="text-xs text-muted-foreground mt-1">
+            <div className="text-3xl font-bold text-gray-400 mb-2">{analytics.expiredTickets}</div>
+            <div className="text-sm text-gray-200 font-medium">Expired Tickets</div>
+            <div className="text-xs text-gray-300 mt-1">
               {analytics.totalTickets > 0 ? Math.round((analytics.expiredTickets / analytics.totalTickets) * 100) : 0}% of total
             </div>
           </CardContent>
