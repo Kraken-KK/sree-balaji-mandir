@@ -4,18 +4,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Shield } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface AdminCodeInputProps {
-  onSubmit: (code: string) => void;
+  onSuccess: () => void;
   loading?: boolean;
 }
 
-export const AdminCodeInput: React.FC<AdminCodeInputProps> = ({ onSubmit, loading }) => {
+export const AdminCodeInput: React.FC<AdminCodeInputProps> = ({ onSuccess, loading }) => {
   const [adminCode, setAdminCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(adminCode);
+    if (adminCode.length !== 6) return;
+
+    setIsLoading(true);
+    
+    // Simple admin code validation (you can replace this with your actual logic)
+    if (adminCode === '123456') {
+      toast({
+        title: "Access Granted",
+        description: "Welcome to the admin dashboard",
+      });
+      onSuccess();
+    } else {
+      toast({
+        title: "Access Denied",
+        description: "Invalid admin code",
+        variant: "destructive",
+      });
+    }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -50,9 +72,9 @@ export const AdminCodeInput: React.FC<AdminCodeInputProps> = ({ onSubmit, loadin
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={loading || adminCode.length !== 6}
+            disabled={loading || isLoading || adminCode.length !== 6}
           >
-            {loading ? 'Verifying...' : 'Access Dashboard'}
+            {loading || isLoading ? 'Verifying...' : 'Access Dashboard'}
           </Button>
         </form>
       </CardContent>

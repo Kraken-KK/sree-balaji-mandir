@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { QrReader } from 'react-qr-reader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -267,7 +268,8 @@ const QRScanner: React.FC = () => {
                     }
                   }}
                   constraints={{
-                    video: { deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined },
+                    facingMode: cameraFacingMode,
+                    deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
                   }}
                   className="w-full rounded-lg overflow-hidden"
                 />
