@@ -22,6 +22,7 @@ import Settings from "./pages/Settings";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import ProtectedRoute from "./components/ProtectedRoute";
 import CreatedByBadge from './components/Navbar';
+import Sribot from "./components/Sribot";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <CreatedByBadge />
+                <Sribot />
               </div>
             </BrowserRouter>
           </TooltipProvider>
