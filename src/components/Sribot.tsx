@@ -7,12 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { Sparkles, Send, Minimize2, MessageCircle, User, Bot } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { sendMessageToSribot } from '@/lib/sribot-api';
+import TypingText from '@/components/TypingText'; // Import the TypingText component
+
 interface Message {
   id: string;
   text: string;
   isUser: boolean;
   timestamp: Date;
 }
+
 const Sribot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([{
@@ -25,14 +28,17 @@ const Sribot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({
       behavior: 'smooth'
     });
   };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
     const userMessage: Message = {
@@ -66,13 +72,16 @@ const Sribot = () => {
       setIsLoading(false);
     }
   };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
+
   const quickActions = ["Show upcoming events", "Temple services and costs", "How to make donations", "Temple history", "Gallery highlights", "Contact information"];
+
   return <>
       {/* Floating Icon */}
       <div className="fixed bottom-6 right-6 z-50">
@@ -86,7 +95,7 @@ const Sribot = () => {
 
       {/* Chat Interface */}
       {isOpen && <div className={`fixed z-50 ${isMobile ? 'inset-4 top-8' : 'bottom-24 right-6 w-96 h-[600px]'}`}>
-          <Card className={`${isMobile ? 'h-full' : 'h-full'} flex flex-col shadow-2xl border-2 border-primary/20 animate-scale-in`}>
+          <Card className={`${isMobile ? 'h-full' : 'h-full'} flex flex-col shadow-2xl border-2 border-primary/20 animate-scale-in bg-gradient-to-br from-yellow-50 via-white to-orange-100 backdrop-blur-lg`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 temple-gradient text-white">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -106,22 +115,27 @@ const Sribot = () => {
               {/* Messages */}
               <ScrollArea className="flex-1 p-4 bg-neutral-300">
                 <div className="space-y-4">
-                  {messages.map(message => <div key={message.id} className={`flex gap-3 ${message.isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${message.isUser ? 'bg-primary text-white' : 'temple-gradient text-white'}`}>
-                        {message.isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                  {messages.map((message, idx) => {
+                    const isLatestBotMsg = !message.isUser && idx === messages.length - 1;
+                    return (
+                      <div key={message.id} className={`flex gap-3 ${message.isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${message.isUser ? 'bg-primary text-white' : 'temple-gradient text-white'} ${isLatestBotMsg ? 'shadow-lg animate-pop' : ''}`}>
+                          {message.isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                        </div>
+                        <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.isUser ? 'bg-primary text-white' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-white'} ${isLatestBotMsg ? 'shadow-lg animate-fade-in border border-yellow-300' : ''}`}>
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                            {isLatestBotMsg ? <TypingText text={message.text} /> : message.text}
+                          </p>
+                          <p className={`text-xs mt-1 opacity-70 ${message.isUser ? 'text-white/70' : 'text-gray-500'}`}>
+                            {message.timestamp.toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
                       </div>
-                      <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.isUser ? 'bg-primary text-white' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-white'}`}>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                          {message.text}
-                        </p>
-                        <p className={`text-xs mt-1 opacity-70 ${message.isUser ? 'text-white/70' : 'text-gray-500'}`}>
-                          {message.timestamp.toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                        </p>
-                      </div>
-                    </div>)}
+                    );
+                  })}
                   {isLoading && <div className="flex gap-3">
                       <div className="w-8 h-8 rounded-full temple-gradient text-white flex items-center justify-center">
                         <Bot className="w-4 h-4" />
@@ -171,4 +185,5 @@ const Sribot = () => {
         </div>}
     </>;
 };
+
 export default Sribot;
