@@ -143,7 +143,7 @@ const Sribot = () => {
               </ScrollArea>
 
               {/* Quick Actions */}
-              {messages.length === 1 && <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+              {messages.length === 1 && <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-slate-100">
                   <p className="text-sm font-medium mb-3 text-gray-600 dark:text-gray-300">
                     Quick Actions:
                   </p>
