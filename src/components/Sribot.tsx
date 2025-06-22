@@ -155,7 +155,7 @@ const Sribot = () => {
                 </div>}
 
               {/* Input */}
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-accent-foreground">
                 <div className="flex gap-2">
                   <Input value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyPress={handleKeyPress} placeholder="Ask me about temple services, events, or anything else..." className="flex-1" disabled={isLoading} />
                   <Button onClick={handleSendMessage} disabled={!inputValue.trim() || isLoading} className="temple-gradient hover:scale-105 transition-transform">
