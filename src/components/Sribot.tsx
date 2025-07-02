@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Sparkles, Send, Minimize2, MessageCircle, User, Bot } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { sendMessageToSribot } from '@/lib/sribot-api';
-import TypingText from '@/components/TypingText'; // Import the TypingText component
+import TypingText from '@/components/TypingText';
 
 interface Message {
   id: string;
@@ -30,8 +31,9 @@ const Sribot = () => {
   const isMobile = useIsMobile();
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: 'smooth'
+    messagesEndRef.current?.scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'end'
     });
   };
 
@@ -41,15 +43,18 @@ const Sribot = () => {
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
+
     const userMessage: Message = {
       id: Date.now().toString(),
       text: inputValue,
       isUser: true,
       timestamp: new Date()
     };
+
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
+
     try {
       const response = await sendMessageToSribot(inputValue);
       const botMessage: Message = {
@@ -80,12 +85,23 @@ const Sribot = () => {
     }
   };
 
-  const quickActions = ["Show upcoming events", "Temple services and costs", "How to make donations", "Temple history", "Gallery highlights", "Contact information"];
+  const quickActions = [
+    "Show upcoming events",
+    "Temple services and costs", 
+    "How to make donations",
+    "Temple history",
+    "Gallery highlights",
+    "Contact information"
+  ];
 
-  return <>
+  return (
+    <>
       {/* Floating Icon */}
       <div className="fixed bottom-6 right-6 z-50">
-        <Button onClick={() => setIsOpen(!isOpen)} className={`${isOpen ? 'hidden' : 'flex'} w-16 h-16 rounded-full temple-gradient hover:scale-110 transition-all duration-300 shadow-2xl hover:shadow-3xl group ${isMobile ? 'w-14 h-14' : ''}`}>
+        <Button
+          onClick={() => setIsOpen(!isOpen)}
+          className={`${isOpen ? 'hidden' : 'flex'} w-16 h-16 rounded-full temple-gradient hover:scale-110 transition-all duration-300 shadow-2xl hover:shadow-3xl group ${isMobile ? 'w-14 h-14' : ''}`}
+        >
           <div className="relative">
             <Sparkles className={`${isMobile ? 'w-6 h-6' : 'w-7 h-7'} text-white group-hover:rotate-12 transition-transform`} />
             <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
@@ -94,7 +110,8 @@ const Sribot = () => {
       </div>
 
       {/* Chat Interface */}
-      {isOpen && <div className={`fixed z-50 ${isMobile ? 'inset-4 top-8' : 'bottom-24 right-6 w-96 h-[600px]'}`}>
+      {isOpen && (
+        <div className={`fixed z-50 ${isMobile ? 'inset-4 top-8' : 'bottom-24 right-6 w-96 h-[600px]'}`}>
           <Card className={`${isMobile ? 'h-full' : 'h-full'} flex flex-col shadow-2xl border-2 border-primary/20 animate-scale-in bg-gradient-to-br from-yellow-50 via-white to-orange-100 backdrop-blur-lg`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 temple-gradient text-white">
               <div className="flex items-center gap-3">
@@ -106,7 +123,12 @@ const Sribot = () => {
                   <p className="text-xs opacity-90">Temple AI Assistant</p>
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)} className="text-white hover:bg-white/20">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsOpen(false)}
+                className="text-white hover:bg-white/20"
+              >
                 <Minimize2 className="w-4 h-4" />
               </Button>
             </CardHeader>
@@ -118,61 +140,96 @@ const Sribot = () => {
                   {messages.map((message, idx) => {
                     const isLatestBotMsg = !message.isUser && idx === messages.length - 1;
                     return (
-                      <div key={message.id} className={`flex gap-3 ${message.isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${message.isUser ? 'bg-primary text-white' : 'temple-gradient text-white'} ${isLatestBotMsg ? 'shadow-lg animate-pop' : ''}`}>
+                      <div
+                        key={message.id}
+                        className={`flex gap-3 ${message.isUser ? 'flex-row-reverse' : 'flex-row'}`}
+                      >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          message.isUser 
+                            ? 'bg-primary text-white' 
+                            : 'temple-gradient text-white'
+                        } ${isLatestBotMsg ? 'shadow-lg animate-pop' : ''}`}>
                           {message.isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                         </div>
-                        <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.isUser ? 'bg-primary text-white' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-white'} ${isLatestBotMsg ? 'shadow-lg animate-fade-in border border-yellow-300' : ''}`}>
+                        <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                          message.isUser 
+                            ? 'bg-primary text-white' 
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-white'
+                        } ${isLatestBotMsg ? 'shadow-lg animate-fade-in border border-yellow-300' : ''}`}>
                           <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                            {isLatestBotMsg ? <TypingText text={message.text} /> : message.text}
+                            {isLatestBotMsg ? (
+                              <TypingText text={message.text} />
+                            ) : (
+                              message.text
+                            )}
                           </p>
-                          <p className={`text-xs mt-1 opacity-70 ${message.isUser ? 'text-white/70' : 'text-gray-500'}`}>
-                            {message.timestamp.toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit'
+                          <p className={`text-xs mt-1 opacity-70 ${
+                            message.isUser ? 'text-white/70' : 'text-gray-500'
+                          }`}>
+                            {message.timestamp.toLocaleTimeString([], { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
                             })}
                           </p>
                         </div>
                       </div>
                     );
                   })}
-                  {isLoading && <div className="flex gap-3">
+                  {isLoading && (
+                    <div className="flex gap-3">
                       <div className="w-8 h-8 rounded-full temple-gradient text-white flex items-center justify-center">
                         <Bot className="w-4 h-4" />
                       </div>
                       <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-3">
                         <div className="flex gap-1">
                           <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{
-                      animationDelay: '0.1s'
-                    }} />
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{
-                      animationDelay: '0.2s'
-                    }} />
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                         </div>
                       </div>
-                    </div>}
+                    </div>
+                  )}
                 </div>
                 <div ref={messagesEndRef} />
               </ScrollArea>
 
               {/* Quick Actions */}
-              {messages.length === 1 && <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-slate-100">
+              {messages.length === 1 && (
+                <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-slate-100">
                   <p className="text-sm font-medium mb-3 text-gray-600 dark:text-gray-300">
                     Quick Actions:
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {quickActions.map((action, index) => <Badge key={index} variant="outline" className="cursor-pointer hover:bg-primary hover:text-white transition-colors text-xs" onClick={() => setInputValue(action)}>
+                    {quickActions.map((action, index) => (
+                      <Badge
+                        key={index}
+                        variant="outline"
+                        className="cursor-pointer hover:bg-primary hover:text-white transition-colors text-xs"
+                        onClick={() => setInputValue(action)}
+                      >
                         {action}
-                      </Badge>)}
+                      </Badge>
+                    ))}
                   </div>
-                </div>}
+                </div>
+              )}
 
               {/* Input */}
               <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-accent-foreground">
                 <div className="flex gap-2">
-                  <Input value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyPress={handleKeyPress} placeholder="Ask me about temple services, events, or anything else..." className="flex-1" disabled={isLoading} />
-                  <Button onClick={handleSendMessage} disabled={!inputValue.trim() || isLoading} className="temple-gradient hover:scale-105 transition-transform">
+                  <Input
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Ask me about temple services, events, or anything else..."
+                    className="flex-1"
+                    disabled={isLoading}
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!inputValue.trim() || isLoading}
+                    className="temple-gradient hover:scale-105 transition-transform"
+                  >
                     <Send className="w-4 h-4" />
                   </Button>
                 </div>
@@ -182,8 +239,10 @@ const Sribot = () => {
               </div>
             </CardContent>
           </Card>
-        </div>}
-    </>;
+        </div>
+      )}
+    </>
+  );
 };
 
 export default Sribot;
