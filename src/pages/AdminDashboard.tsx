@@ -114,7 +114,21 @@ const AdminDashboard = () => {
         
         setTickets(transformedData);
       } else {
-        setTickets(data || []);
+        // Transform RPC data to match expected format
+        const transformedData = data?.map((ticket: any) => ({
+          id: ticket.id,
+          ticket_number: ticket.ticket_number,
+          customer_name: ticket.customer_name,
+          customer_email: ticket.customer_email,
+          status: ticket.status,
+          created_at: ticket.created_at,
+          services: ticket.services && typeof ticket.services === 'object' ? {
+            name: ticket.services.name || 'N/A',
+            price: ticket.services.price || 0
+          } : null
+        })) || [];
+        
+        setTickets(transformedData);
       }
 
       console.log('Fetched tickets:', data?.length || 0);
