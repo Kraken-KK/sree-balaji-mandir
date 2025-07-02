@@ -89,7 +89,7 @@ const AdminDashboard = () => {
       
       // Use service role key for admin access to bypass RLS
       const { data, error } = await supabase
-        .rpc('get_all_tickets_admin'); // We'll create this RPC function
+        .rpc('get_all_tickets_admin') as { data: TicketData[] | null; error: any };
 
       if (error) {
         // Fallback to regular query if RPC doesn't exist
@@ -139,7 +139,7 @@ const AdminDashboard = () => {
       
       // Use service role key for admin access to bypass RLS
       const { data, error } = await supabase
-        .rpc('get_all_users_admin'); // We'll create this RPC function
+        .rpc('get_all_users_admin') as { data: UserData[] | null; error: any };
 
       if (error) {
         // Fallback to regular query if RPC doesn't exist

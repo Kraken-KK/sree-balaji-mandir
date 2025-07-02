@@ -87,7 +87,7 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ isOpen, onClose }) => {
         </DialogHeader>
         
         <div className="space-y-6">
-          <RadioGroup value={apiKeySource} onValueChange={setApiKeySource}>
+          <RadioGroup value={apiKeySource} onValueChange={(value) => setApiKeySource(value as 'temple' | 'personal')}>
             <Card className="bg-white/5 border-white/10 hover:bg-white/10 transition-colors">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">

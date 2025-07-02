@@ -374,6 +374,39 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_all_tickets_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          user_id: string
+          service_id: string
+          payment_id: string
+          booking_date: string
+          service_date: string
+          created_at: string
+          updated_at: string
+          customer_name: string
+          ticket_number: string
+          customer_email: string
+          status: string
+          qr_code: string
+          services: Json
+        }[]
+      }
+      get_all_users_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          user_id: string
+          created_at: string
+          updated_at: string
+          full_name: string
+          username: string
+          bio: string
+          phone: string
+          location: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
