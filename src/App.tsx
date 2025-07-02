@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Sribot from "./components/Sribot";
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 const queryClient = new QueryClient();
 
@@ -65,10 +66,11 @@ function App() {
                   <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                   <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+                  <Route path="/admin/*" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
                   <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-                <Sribot />
+                <SribotWithConditionalRender />
               </BrowserRouter>
             </TooltipProvider>
           </AuthProvider>
@@ -76,6 +78,19 @@ function App() {
       </ThemeProvider>
     </QueryClientProvider>
   );
+}
+
+// Component to conditionally render Sribot based on current route
+function SribotWithConditionalRender() {
+  const location = useLocation();
+  const authPages = ['/auth', '/signup', '/landing'];
+  
+  // Don't show Sribot on authentication pages and landing page
+  if (authPages.includes(location.pathname)) {
+    return null;
+  }
+  
+  return <Sribot />;
 }
 
 export default App;

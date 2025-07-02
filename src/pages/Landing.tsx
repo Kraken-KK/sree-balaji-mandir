@@ -18,14 +18,21 @@ import { useEffect } from 'react';
 const Landing = () => {
   const navigate = useNavigate();
 
-  const handleExploreTemple = () => {
+  useEffect(() => {
+    // Ensure this page is marked as visited when component mounts
     localStorage.setItem('temple-has-visited', 'true');
-    navigate('/');
+  }, []);
+
+  const handleExploreTemple = () => {
+    // Mark as visited and navigate
+    localStorage.setItem('temple-has-visited', 'true');
+    navigate('/', { replace: true });
   };
 
   const handleJoinCommunity = () => {
+    // Mark as visited and navigate
     localStorage.setItem('temple-has-visited', 'true');
-    navigate('/signup');
+    navigate('/signup', { replace: true });
   };
 
   return (

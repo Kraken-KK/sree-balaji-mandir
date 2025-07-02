@@ -10,6 +10,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { sendMessageToSribot } from '@/lib/sribot-api';
 import TypingText from '@/components/TypingText';
 import ApiKeyDialog from '@/components/ApiKeyDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 interface Message {
   id: string;
@@ -30,13 +32,47 @@ const Sribot = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
+  // Fetch real-time events data
+  const { data: events } = useQuery({
+    queryKey: ['events'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .gte('date', new Date().toISOString().split('T')[0])
+        .order('date', { ascending: true });
+      
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  // Fetch real-time services data
+  const { data: services } = useQuery({
+    queryKey: ['services'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('name', { ascending: true });
+      
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 30000,
+  });
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ 
-      behavior: 'smooth',
-      block: 'end'
-    });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'end'
+      });
+    }
   };
 
   useEffect(() => {
@@ -65,7 +101,15 @@ const Sribot = () => {
     setIsLoading(true);
 
     try {
-      const response = await sendMessageToSribot(inputValue);
+      // Include real-time data context
+      const contextualMessage = `${inputValue}
+
+      Current temple data context:
+      - Upcoming events: ${events?.slice(0, 5).map(e => `${e.name} on ${e.date} at ${e.time} (${e.location})`).join(', ') || 'No upcoming events'}
+      - Available services: ${services?.slice(0, 10).map(s => `${s.name} - ₹${s.price || 0}`).join(', ') || 'No services available'}
+      `;
+
+      const response = await sendMessageToSribot(contextualMessage);
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: response,
@@ -120,9 +164,9 @@ const Sribot = () => {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div className={`fixed z-50 ${isMobile ? 'inset-4 top-8' : 'bottom-24 right-6 w-96 h-[600px]'}`}>
-          <Card className={`${isMobile ? 'h-full' : 'h-full'} flex flex-col shadow-2xl border-2 border-primary/20 animate-scale-in bg-gradient-to-br from-yellow-50 via-white to-orange-100 backdrop-blur-lg`}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 temple-gradient text-white">
+        <div className={`fixed z-50 ${isMobile ? 'inset-4 top-8' : 'bottom-24 right-6 w-96 max-h-[600px]'}`}>
+          <Card className={`${isMobile ? 'h-full' : 'h-full max-h-[600px]'} flex flex-col shadow-2xl border-2 border-primary/20 animate-scale-in bg-gradient-to-br from-yellow-50 via-white to-orange-100 backdrop-blur-lg`}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 temple-gradient text-white flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                   <Sparkles className="w-5 h-5" />
@@ -142,9 +186,12 @@ const Sribot = () => {
               </Button>
             </CardHeader>
 
-            <CardContent className="flex-1 flex flex-col p-0">
+            <CardContent className="flex-1 flex flex-col p-0 min-h-0">
               {/* Messages */}
-              <ScrollArea className="flex-1 p-4 bg-neutral-300">
+              <ScrollArea 
+                className="flex-1 p-4 bg-neutral-300 overflow-y-auto max-h-[400px]" 
+                ref={scrollAreaRef}
+              >
                 <div className="space-y-4">
                   {messages.map((message, idx) => {
                     const isLatestBotMsg = !message.isUser && idx === messages.length - 1;
@@ -204,7 +251,7 @@ const Sribot = () => {
 
               {/* Quick Actions */}
               {messages.length === 1 && (
-                <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-slate-100">
+                <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-slate-100 flex-shrink-0">
                   <p className="text-sm font-medium mb-3 text-gray-600 dark:text-gray-300">
                     Quick Actions:
                   </p>
@@ -224,7 +271,7 @@ const Sribot = () => {
               )}
 
               {/* Input */}
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-accent-foreground">
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-accent-foreground flex-shrink-0">
                 <div className="flex gap-2">
                   <Input
                     value={inputValue}
