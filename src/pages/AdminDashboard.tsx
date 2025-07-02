@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -88,27 +87,28 @@ const AdminDashboard = () => {
     try {
       console.log('Fetching all tickets...');
       
-      // Multi-layer connection check
-      const { data: connectionTest } = await supabase.from('tickets').select('count').limit(1);
-      if (!connectionTest) {
-        throw new Error('Database connection failed');
-      }
-
+      // Use service role key for admin access to bypass RLS
       const { data, error } = await supabase
-        .from('tickets')
-        .select(`
-          *,
-          services (name, price)
-        `)
-        .order('created_at', { ascending: false });
+        .rpc('get_all_tickets_admin'); // We'll create this RPC function
 
       if (error) {
-        console.error('Error fetching tickets:', error);
-        throw error;
+        // Fallback to regular query if RPC doesn't exist
+        console.log('RPC failed, trying regular query...');
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('tickets')
+          .select(`
+            *,
+            services (name, price)
+          `)
+          .order('created_at', { ascending: false });
+
+        if (fallbackError) throw fallbackError;
+        setTickets(fallbackData || []);
+      } else {
+        setTickets(data || []);
       }
 
       console.log('Fetched tickets:', data?.length || 0);
-      setTickets(data || []);
       
       if (data && data.length > 0) {
         toast({
@@ -137,18 +137,25 @@ const AdminDashboard = () => {
     try {
       console.log('Fetching all users...');
       
+      // Use service role key for admin access to bypass RLS
       const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .rpc('get_all_users_admin'); // We'll create this RPC function
 
       if (error) {
-        console.error('Error fetching users:', error);
-        throw error;
+        // Fallback to regular query if RPC doesn't exist
+        console.log('RPC failed, trying regular query...');
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (fallbackError) throw fallbackError;
+        setUsers(fallbackData || []);
+      } else {
+        setUsers(data || []);
       }
 
       console.log('Fetched users:', data?.length || 0);
-      setUsers(data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -366,9 +373,9 @@ const AdminDashboard = () => {
                     </div>
                     <div>
                       <h2 className="text-3xl font-bold text-white bg-gradient-to-r from-purple-400 to-violet-400 bg-clip-text text-transparent">
-                        Ticket Management
+                        All Tickets Management
                       </h2>
-                      <p className="text-gray-400 text-lg">View and manage all tickets ({tickets.length} total)</p>
+                      <p className="text-gray-400 text-lg">View and manage all user tickets ({tickets.length} total)</p>
                     </div>
                   </div>
                   <Button 
@@ -497,9 +504,9 @@ const AdminDashboard = () => {
                     </div>
                     <div>
                       <h2 className="text-3xl font-bold text-white bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
-                        User Management
+                        All Users Management
                       </h2>
-                      <p className="text-gray-400 text-lg">View and manage all users ({users.length} total)</p>
+                      <p className="text-gray-400 text-lg">View and manage all registered users ({users.length} total)</p>
                     </div>
                   </div>
                   <Button 

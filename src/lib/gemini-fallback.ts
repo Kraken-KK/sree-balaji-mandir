@@ -2,7 +2,20 @@
 // Gemini fallback for Sribot chat
 // This file provides a direct Gemini API call if Supabase fails
 
-const GEMINI_API_KEY = (window as any).VITE_GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+const getApiKey = () => {
+  // Check if user has set a personal API key
+  const apiKeySource = localStorage.getItem('api_key_source');
+  if (apiKeySource === 'personal') {
+    const personalKey = localStorage.getItem('personal_gemini_api_key');
+    if (personalKey) {
+      return personalKey;
+    }
+  }
+  
+  // Fall back to temple's API key
+  return (window as any).VITE_GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+};
+
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 const templeKnowledge = `Sri Balaji Temple - Complete Information Database:
@@ -110,8 +123,10 @@ ACCESSIBILITY:
 - Multiple payment options for donations`;
 
 export async function sendMessageToGemini(message: string): Promise<string> {
+  const GEMINI_API_KEY = getApiKey();
+  
   if (!GEMINI_API_KEY) {
-    return "🙏 Gemini API key not configured. Please contact the temple.";
+    return "🙏 API key not configured. Please type /api-key to set up your API key or contact the temple.";
   }
 
   const prompt = `You are Sribot, the AI assistant for Sri Balaji Temple. You are knowledgeable, helpful, and speak with devotion and respect. Always start responses with appropriate greetings like "🙏" or "Namaste".

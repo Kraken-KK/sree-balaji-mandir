@@ -9,6 +9,7 @@ import { Sparkles, Send, Minimize2, MessageCircle, User, Bot } from 'lucide-reac
 import { useIsMobile } from '@/hooks/use-mobile';
 import { sendMessageToSribot } from '@/lib/sribot-api';
 import TypingText from '@/components/TypingText';
+import ApiKeyDialog from '@/components/ApiKeyDialog';
 
 interface Message {
   id: string;
@@ -19,6 +20,7 @@ interface Message {
 
 const Sribot = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [messages, setMessages] = useState<Message[]>([{
     id: '1',
     text: "🙏 Namaste! I'm Sribot, your divine assistant for Sri Balaji Temple. I can help you with events, services, donations, temple history, and guide you through our digital platform. How may I assist you today?",
@@ -43,6 +45,13 @@ const Sribot = () => {
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
+
+    // Check for /api-key command
+    if (inputValue.trim().toLowerCase() === '/api-key') {
+      setShowApiKeyDialog(true);
+      setInputValue('');
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -221,7 +230,7 @@ const Sribot = () => {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Ask me about temple services, events, or anything else..."
+                    placeholder="Ask me about temple services, events, or type /api-key..."
                     className="flex-1"
                     disabled={isLoading}
                   />
@@ -234,13 +243,19 @@ const Sribot = () => {
                   </Button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2 text-center">
-                  Powered by Gemini AI • Temple Assistant
+                  Powered by Gemini AI • Temple Assistant • Type /api-key for settings
                 </p>
               </div>
             </CardContent>
           </Card>
         </div>
       )}
+
+      {/* API Key Dialog */}
+      <ApiKeyDialog 
+        isOpen={showApiKeyDialog} 
+        onClose={() => setShowApiKeyDialog(false)} 
+      />
     </>
   );
 };

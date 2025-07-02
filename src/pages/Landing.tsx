@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,8 +13,21 @@ import {
   Sparkles,
   Globe
 } from 'lucide-react';
+import { useEffect } from 'react';
 
 const Landing = () => {
+  const navigate = useNavigate();
+
+  const handleExploreTemple = () => {
+    localStorage.setItem('temple-has-visited', 'true');
+    navigate('/');
+  };
+
+  const handleJoinCommunity = () => {
+    localStorage.setItem('temple-has-visited', 'true');
+    navigate('/signup');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative overflow-hidden">
       {/* Animated background elements */}
@@ -64,17 +76,20 @@ const Landing = () => {
             </div>
 
             <div className="flex flex-wrap gap-4">
-              <Link to="/">
-                <Button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-8 py-6 text-lg hover-scale">
-                  Explore Temple
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </Link>
-              <Link to="/signup">
-                <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 px-8 py-6 text-lg hover-scale">
-                  Join Community
-                </Button>
-              </Link>
+              <Button 
+                onClick={handleExploreTemple}
+                className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-8 py-6 text-lg hover-scale"
+              >
+                Explore Temple
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+              <Button 
+                onClick={handleJoinCommunity}
+                variant="outline" 
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20 px-8 py-6 text-lg hover-scale"
+              >
+                Join Community
+              </Button>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-8">
