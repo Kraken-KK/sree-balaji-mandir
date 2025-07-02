@@ -87,13 +87,12 @@ const AdminDashboard = () => {
     try {
       console.log('Fetching all tickets...');
       
-      // Use service role key for admin access to bypass RLS
-      const { data, error } = await supabase
-        .rpc('get_all_tickets_admin') as { data: TicketData[] | null; error: any };
+      // Use the admin RPC function to get all tickets
+      const { data, error } = await supabase.rpc('get_all_tickets_admin');
 
       if (error) {
-        // Fallback to regular query if RPC doesn't exist
-        console.log('RPC failed, trying regular query...');
+        console.error('RPC error:', error);
+        // Fallback to regular query if RPC doesn't work
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('tickets')
           .select(`
@@ -103,7 +102,17 @@ const AdminDashboard = () => {
           .order('created_at', { ascending: false });
 
         if (fallbackError) throw fallbackError;
-        setTickets(fallbackData || []);
+        
+        // Transform fallback data to match expected format
+        const transformedData = fallbackData?.map(ticket => ({
+          ...ticket,
+          services: ticket.services ? {
+            name: ticket.services.name,
+            price: ticket.services.price
+          } : null
+        })) || [];
+        
+        setTickets(transformedData);
       } else {
         setTickets(data || []);
       }
@@ -137,13 +146,12 @@ const AdminDashboard = () => {
     try {
       console.log('Fetching all users...');
       
-      // Use service role key for admin access to bypass RLS
-      const { data, error } = await supabase
-        .rpc('get_all_users_admin') as { data: UserData[] | null; error: any };
+      // Use the admin RPC function to get all users
+      const { data, error } = await supabase.rpc('get_all_users_admin');
 
       if (error) {
-        // Fallback to regular query if RPC doesn't exist
-        console.log('RPC failed, trying regular query...');
+        console.error('RPC error:', error);
+        // Fallback to regular query if RPC doesn't work
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('user_profiles')
           .select('*')

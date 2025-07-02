@@ -76,6 +76,10 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
+  const handleRadioChange = (value: string) => {
+    setApiKeySource(value as 'temple' | 'personal');
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 border border-white/20 text-white">
@@ -87,7 +91,7 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ isOpen, onClose }) => {
         </DialogHeader>
         
         <div className="space-y-6">
-          <RadioGroup value={apiKeySource} onValueChange={(value) => setApiKeySource(value as 'temple' | 'personal')}>
+          <RadioGroup value={apiKeySource} onValueChange={handleRadioChange}>
             <Card className="bg-white/5 border-white/10 hover:bg-white/10 transition-colors">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
