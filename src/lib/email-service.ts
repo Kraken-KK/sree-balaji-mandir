@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 interface EmailData {
@@ -9,12 +8,19 @@ interface EmailData {
   eventName?: string;
   eventDate?: string;
   registrationMembers?: number;
+  serviceDate?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  message?: string;
+  subject?: string;
+  content?: string;
 }
 
 export const sendNotificationEmail = async (
   to: string,
   name: string,
-  type: 'signup' | 'service_booking' | 'donation' | 'event_registration',
+  type: 'signup' | 'service_booking' | 'donation' | 'event_registration' | 'broadcast' | 'contact_form',
   data?: EmailData
 ) => {
   try {
