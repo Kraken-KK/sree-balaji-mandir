@@ -12,302 +12,217 @@ const corsHeaders = {
 
 interface EmailRequest {
   to: string | string[];
-  name?: string;
-  type: 'signup' | 'service_booking' | 'donation' | 'event_registration' | 'broadcast';
-  data?: {
-    serviceName?: string;
-    servicePrice?: number;
-    ticketNumber?: string;
-    donationAmount?: number;
-    eventName?: string;
-    eventDate?: string;
-    registrationMembers?: number;
-    subject?: string;
-    content?: string;
-  };
+  name: string;
+  type: 'signup' | 'service_booking' | 'event_registration' | 'donation_receipt' | 'broadcast' | 'contact_form';
+  data?: any;
 }
 
-const getEmailContent = (type: string, name: string, data: any) => {
-  const settingsUrl = `${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovableproject.com')}/settings`;
-  
-  const logoHeader = `
-    <div style="text-align: center; margin-bottom: 20px;">
-      <img src="https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275" alt="Sri Balaji Temple" style="max-width: 120px; height: auto;" />
-    </div>
-  `;
-  
-  switch (type) {
-    case 'broadcast':
-      return {
-        subject: data.subject || "Important Update from Sri Balaji Temple",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
-            ${logoHeader}
-            <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); padding: 30px; border-radius: 10px; text-align: center; color: white;">
-              <h1 style="margin: 0; font-size: 28px;">🕉️ Message from Sri Balaji Temple</h1>
-            </div>
-            
-            <div style="background: white; padding: 30px; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-              ${data.content || '<p>Greetings from Sri Balaji Temple!</p>'}
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${settingsUrl}" style="background: linear-gradient(135deg, #ff6b35, #f7931e); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
-                  Visit Temple Portal
-                </a>
-              </div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 30px; color: #666;">
-              <p>🙏 With divine blessings</p>
-              <p style="font-style: italic;">With warm regards,<br><strong>Karthikeya</strong><br>Sri Balaji Temple</p>
-            </div>
-          </div>
-        `
-      };
-      
-    case 'signup':
-      return {
-        subject: "Welcome to Sri Balaji Temple! 🙏",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
-            ${logoHeader}
-            <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); padding: 30px; border-radius: 10px; text-align: center; color: white;">
-              <h1 style="margin: 0; font-size: 28px;">🕉️ Welcome to Sri Balaji Temple!</h1>
-            </div>
-            
-            <div style="background: white; padding: 30px; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-              <h2 style="color: #333; margin-bottom: 20px;">Dear ${name},</h2>
-              
-              <p style="color: #555; line-height: 1.6; font-size: 16px;">
-                Welcome to our spiritual community! We're delighted to have you join the Sri Balaji Temple family.
-              </p>
-              
-              <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff6b35;">
-                <h3 style="color: #ff6b35; margin-top: 0;">What you can do now:</h3>
-                <ul style="color: #555; line-height: 1.8;">
-                  <li>📅 Register for upcoming events and festivals</li>
-                  <li>🛕 Book temple services and pujas</li>
-                  <li>💝 Make donations for various causes</li>
-                  <li>📸 Browse our gallery of temple moments</li>
-                  <li>📱 Chat with our AI assistant Sribot for guidance</li>
-                </ul>
-              </div>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${settingsUrl}" style="background: linear-gradient(135deg, #ff6b35, #f7931e); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
-                  Visit Your Dashboard
-                </a>
-              </div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 30px; color: #666;">
-              <p>🙏 Thank you for joining our spiritual journey</p>
-              <p style="font-style: italic;">With warm regards,<br><strong>Karthikeya</strong><br>Sri Balaji Temple</p>
-            </div>
-          </div>
-        `
-      };
-      
-    case 'service_booking':
-      return {
-        subject: `Service Booked Successfully - ${data.serviceName} 🛕`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
-            ${logoHeader}
-            <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); padding: 30px; border-radius: 10px; text-align: center; color: white;">
-              <h1 style="margin: 0; font-size: 28px;">🛕 Service Booking Confirmed!</h1>
-            </div>
-            
-            <div style="background: white; padding: 30px; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-              <h2 style="color: #333; margin-bottom: 20px;">Dear ${name},</h2>
-              
-              <p style="color: #555; line-height: 1.6; font-size: 16px;">
-                Your service booking has been confirmed successfully. May this sacred service bring peace and blessings to your life.
-              </p>
-              
-              <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff6b35;">
-                <h3 style="color: #ff6b35; margin-top: 0;">Booking Details:</h3>
-                <table style="width: 100%; border-collapse: collapse;">
-                  <tr>
-                    <td style="padding: 8px 0; color: #666; font-weight: bold;">Service:</td>
-                    <td style="padding: 8px 0; color: #333;">${data.serviceName}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #666; font-weight: bold;">Amount:</td>
-                    <td style="padding: 8px 0; color: #333;">₹${data.servicePrice?.toLocaleString()}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #666; font-weight: bold;">Ticket Number:</td>
-                    <td style="padding: 8px 0; color: #333; font-weight: bold;">${data.ticketNumber}</td>
-                  </tr>
-                </table>
-              </div>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${settingsUrl}" style="background: linear-gradient(135deg, #ff6b35, #f7931e); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
-                  View Your Invoice
-                </a>
-              </div>
-              
-              <p style="color: #555; line-height: 1.6; font-size: 14px; font-style: italic;">
-                Please save your ticket number for future reference. You can always check your booking details in your settings.
-              </p>
-            </div>
-            
-            <div style="text-align: center; margin-top: 30px; color: #666;">
-              <p>🙏 Thank you for your devotion and support</p>
-              <p style="font-style: italic;">With divine blessings,<br><strong>Karthikeya</strong><br>Sri Balaji Temple</p>
-            </div>
-          </div>
-        `
-      };
-      
-    case 'donation':
-      return {
-        subject: `Donation Received - Thank You for Your Generosity 💝`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
-            ${logoHeader}
-            <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); padding: 30px; border-radius: 10px; text-align: center; color: white;">
-              <h1 style="margin: 0; font-size: 28px;">💝 Donation Received!</h1>
-            </div>
-            
-            <div style="background: white; padding: 30px; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-              <h2 style="color: #333; margin-bottom: 20px;">Dear ${name},</h2>
-              
-              <p style="color: #555; line-height: 1.6; font-size: 16px;">
-                Your generous donation has been received with immense gratitude. Your contribution helps us serve the community and maintain our sacred traditions.
-              </p>
-              
-              <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff6b35;">
-                <h3 style="color: #ff6b35; margin-top: 0;">Donation Details:</h3>
-                <table style="width: 100%; border-collapse: collapse;">
-                  <tr>
-                    <td style="padding: 8px 0; color: #666; font-weight: bold;">Amount:</td>
-                    <td style="padding: 8px 0; color: #333; font-weight: bold; font-size: 18px;">₹${data.donationAmount?.toLocaleString()}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #666; font-weight: bold;">Date:</td>
-                    <td style="padding: 8px 0; color: #333;">${new Date().toLocaleDateString()}</td>
-                  </tr>
-                </table>
-              </div>
-              
-              <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-                <p style="color: #2e7d32; font-weight: bold; margin: 0; font-size: 16px;">
-                  "The best charity is that given in Ramadan. The hand that gives is better than the hand that receives."
-                </p>
-              </div>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${settingsUrl}" style="background: linear-gradient(135deg, #ff6b35, #f7931e); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
-                  View Your Receipt
-                </a>
-              </div>
-              
-              <p style="color: #555; line-height: 1.6; font-size: 14px; font-style: italic;">
-                Your donation receipt is available in your settings for tax purposes.
-              </p>
-            </div>
-            
-            <div style="text-align: center; margin-top: 30px; color: #666;">
-              <p>🙏 Your generosity makes a difference</p>
-              <p style="font-style: italic;">With heartfelt gratitude,<br><strong>Karthikeya</strong><br>Sri Balaji Temple</p>
-            </div>
-          </div>
-        `
-      };
-      
-    case 'event_registration':
-      return {
-        subject: `Event Registration Confirmed - ${data.eventName} 🎉`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
-            ${logoHeader}
-            <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); padding: 30px; border-radius: 10px; text-align: center; color: white;">
-              <h1 style="margin: 0; font-size: 28px;">🎉 Event Registration Confirmed!</h1>
-            </div>
-            
-            <div style="background: white; padding: 30px; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-              <h2 style="color: #333; margin-bottom: 20px;">Dear ${name},</h2>
-              
-              <p style="color: #555; line-height: 1.6; font-size: 16px;">
-                We're excited to confirm your registration for our upcoming event. We look forward to celebrating this sacred occasion with you and your family.
-              </p>
-              
-              <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff6b35;">
-                <h3 style="color: #ff6b35; margin-top: 0;">Event Details:</h3>
-                <table style="width: 100%; border-collapse: collapse;">
-                  <tr>
-                    <td style="padding: 8px 0; color: #666; font-weight: bold;">Event:</td>
-                    <td style="padding: 8px 0; color: #333; font-weight: bold;">${data.eventName}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #666; font-weight: bold;">Date:</td>
-                    <td style="padding: 8px 0; color: #333;">${data.eventDate}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #666; font-weight: bold;">Members:</td>
-                    <td style="padding: 8px 0; color: #333;">${data.registrationMembers}</td>
-                  </tr>
-                </table>
-              </div>
-              
-              <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-                <p style="color: #1565c0; font-weight: bold; margin: 0;">
-                  📧 Event reminders and updates will be sent to your email
-                </p>
-              </div>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${settingsUrl}" style="background: linear-gradient(135deg, #ff6b35, #f7931e); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
-                  View Registration Details
-                </a>
-              </div>
-              
-              <p style="color: #555; line-height: 1.6; font-size: 14px; font-style: italic;">
-                Please arrive 15 minutes before the event start time. Bring this email confirmation for easy check-in.
-              </p>
-            </div>
-            
-            <div style="text-align: center; margin-top: 30px; color: #666;">
-              <p>🙏 We're blessed to have you join our celebration</p>
-              <p style="font-style: italic;">With joy and anticipation,<br><strong>Karthikeya</strong><br>Sri Balaji Temple</p>
-            </div>
-          </div>
-        `
-      };
-      
-    default:
-      return {
-        subject: "Sri Balaji Temple Notification",
-        html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${logoHeader}<p>Dear ${name},<br><br>Thank you for being part of our temple community.<br><br>With regards,<br>Karthikeya<br>Sri Balaji Temple</p></div>`
-      };
-  }
-};
-
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { to, name, type, data }: EmailRequest = await req.json();
+    
+    let subject = '';
+    let htmlContent = '';
+    
+    const logoUrl = "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275";
 
-    const emailContent = getEmailContent(type, name || 'Devotee', data);
+    switch (type) {
+      case 'signup':
+        subject = '🙏 Welcome to Sri Balaji Temple Community!';
+        htmlContent = `
+          <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background: linear-gradient(135deg, #fff5f5 0%, #fef7cd 100%);">
+            <div style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <img src="${logoUrl}" alt="Sri Balaji Temple" style="width: 80px; height: 80px; border-radius: 50%; background: white; padding: 10px; margin-bottom: 20px;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">🙏 Welcome to Our Divine Community!</h1>
+            </div>
+            <div style="padding: 40px 30px; background: white;">
+              <h2 style="color: #ff6b35; margin-bottom: 20px;">Namaste ${name}! 🕉️</h2>
+              <p style="color: #333; line-height: 1.6; margin-bottom: 20px; font-size: 16px;">
+                Welcome to Sri Balaji Temple! We're blessed to have you join our spiritual community. 
+                Your journey of devotion and enlightenment begins here.
+              </p>
+              <div style="background: #fef7cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff6b35;">
+                <h3 style="color: #ff6b35; margin-top: 0;">✨ What you can do now:</h3>
+                <ul style="color: #333; line-height: 1.8;">
+                  <li>🎪 Register for upcoming festivals and events</li>
+                  <li>🛕 Book special pujas and temple services</li>
+                  <li>💝 Make donations to support temple activities</li>
+                  <li>📸 Explore our beautiful temple gallery</li>
+                  <li>🤖 Chat with Sribot for spiritual guidance</li>
+                </ul>
+              </div>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://sree-balaji-mandir.lovable.app/" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px;">
+                  🏛️ Visit Temple Website
+                </a>
+              </div>
+              <p style="color: #666; font-style: italic; text-align: center; margin-top: 30px;">
+                "सर्वे भवन्तु सुखिनः सर्वे सन्तु निरामयाः"<br>
+                <small>May all beings be happy, may all beings be free from illness</small>
+              </p>
+            </div>
+            <div style="background: #333; color: white; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+              <p style="margin: 0;">🕉️ Sri Balaji Temple | Divine Blessings Always With You 🙏</p>
+            </div>
+          </div>
+        `;
+        break;
 
-    // Handle multiple recipients for broadcast emails
+      case 'service_booking':
+        subject = `🎪 Service Booking Confirmation - ${data.serviceName}`;
+        htmlContent = `
+          <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background: linear-gradient(135deg, #fff5f5 0%, #fef7cd 100%);">
+            <div style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <img src="${logoUrl}" alt="Sri Balaji Temple" style="width: 80px; height: 80px; border-radius: 50%; background: white; padding: 10px; margin-bottom: 20px;">
+              <h1 style="color: white; margin: 0; font-size: 26px;">🛕 Service Booking Confirmed!</h1>
+            </div>
+            <div style="padding: 40px 30px; background: white;">
+              <h2 style="color: #ff6b35; margin-bottom: 20px;">🙏 Namaste ${name}!</h2>
+              <p style="color: #333; line-height: 1.6; margin-bottom: 25px; font-size: 16px;">
+                Your temple service has been successfully booked! The divine blessings await you.
+              </p>
+              <div style="background: #fef7cd; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #ff6b35;">
+                <h3 style="color: #ff6b35; margin-top: 0;">📋 Booking Details:</h3>
+                <ul style="color: #333; line-height: 1.8; list-style: none; padding: 0;">
+                  <li><strong>🛕 Service:</strong> ${data.serviceName}</li>
+                  <li><strong>💰 Amount:</strong> ₹${data.servicePrice.toLocaleString()}</li>
+                  <li><strong>🎫 Ticket Number:</strong> ${data.ticketNumber}</li>
+                  <li><strong>📅 Service Date:</strong> ${data.serviceDate}</li>
+                </ul>
+              </div>
+              <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p style="color: #2d5a2d; margin: 0; font-weight: bold; text-align: center;">
+                  🎫 Please save your ticket number for reference
+                </p>
+              </div>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://sree-balaji-mandir.lovable.app/" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold;">
+                  🏛️ Visit Temple Website
+                </a>
+              </div>
+              <p style="color: #666; font-style: italic; text-align: center; margin-top: 30px;">
+                "हरि ॐ तत्सत्" - May Lord's blessings be with you always 🙏
+              </p>
+            </div>
+            <div style="background: #333; color: white; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+              <p style="margin: 0;">🕉️ Sri Balaji Temple | Your Spiritual Journey Continues 🙏</p>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'event_registration':
+        subject = `🎊 Event Registration Confirmed - ${data.eventName}`;
+        htmlContent = `
+          <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background: linear-gradient(135deg, #fff5f5 0%, #fef7cd 100%);">
+            <div style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <img src="${logoUrl}" alt="Sri Balaji Temple" style="width: 80px; height: 80px; border-radius: 50%; background: white; padding: 10px; margin-bottom: 20px;">
+              <h1 style="color: white; margin: 0; font-size: 26px;">🎉 Event Registration Successful!</h1>
+            </div>
+            <div style="padding: 40px 30px; background: white;">
+              <h2 style="color: #ff6b35; margin-bottom: 20px;">🙏 Namaste ${name}!</h2>
+              <p style="color: #333; line-height: 1.6; margin-bottom: 25px; font-size: 16px;">
+                You have successfully registered for our upcoming temple event! We're excited to celebrate with you.
+              </p>
+              <div style="background: #fef7cd; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #ff6b35;">
+                <h3 style="color: #ff6b35; margin-top: 0;">🎪 Event Details:</h3>
+                <ul style="color: #333; line-height: 1.8; list-style: none; padding: 0;">
+                  <li><strong>🎊 Event:</strong> ${data.eventName}</li>
+                  <li><strong>📅 Date:</strong> ${data.eventDate}</li>
+                  <li><strong>👥 Members:</strong> ${data.registrationMembers}</li>
+                </ul>
+              </div>
+              <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p style="color: #2d5a2d; margin: 0; font-weight: bold; text-align: center;">
+                  📧 You will receive event updates and reminders via email
+                </p>
+              </div>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://sree-balaji-mandir.lovable.app/events" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold;">
+                  🎪 View All Events
+                </a>
+              </div>
+              <p style="color: #666; font-style: italic; text-align: center; margin-top: 30px;">
+                "सत्यं शिवं सुन्दरम्" - Truth, Goodness, Beauty 🕉️
+              </p>
+            </div>
+            <div style="background: #333; color: white; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+              <p style="margin: 0;">🕉️ Sri Balaji Temple | Celebrating Divine Moments Together 🙏</p>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'contact_form':
+        subject = `📧 New Contact Form Submission from ${data.customerName}`;
+        htmlContent = `
+          <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background: linear-gradient(135deg, #fff5f5 0%, #fef7cd 100%);">
+            <div style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <img src="${logoUrl}" alt="Sri Balaji Temple" style="width: 80px; height: 80px; border-radius: 50%; background: white; padding: 10px; margin-bottom: 20px;">
+              <h1 style="color: white; margin: 0; font-size: 26px;">📧 New Contact Form Submission</h1>
+            </div>
+            <div style="padding: 40px 30px; background: white;">
+              <h2 style="color: #ff6b35; margin-bottom: 20px;">Contact Details:</h2>
+              <div style="background: #fef7cd; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #ff6b35;">
+                <ul style="color: #333; line-height: 1.8; list-style: none; padding: 0;">
+                  <li><strong>👤 Name:</strong> ${data.customerName}</li>
+                  <li><strong>📧 Email:</strong> ${data.customerEmail}</li>
+                  <li><strong>📱 Phone:</strong> ${data.customerPhone || 'Not provided'}</li>
+                </ul>
+              </div>
+              <div style="background: #f0f8ff; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #4a90e2;">
+                <h3 style="color: #4a90e2; margin-top: 0;">💬 Message:</h3>
+                <p style="color: #333; line-height: 1.6; margin: 0;">${data.message}</p>
+              </div>
+              <div style="background: #fff2f2; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p style="color: #d32f2f; margin: 0; font-weight: bold; text-align: center;">
+                  📞 Please respond to this inquiry promptly
+                </p>
+              </div>
+            </div>
+            <div style="background: #333; color: white; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+              <p style="margin: 0;">🕉️ Sri Balaji Temple Admin Dashboard</p>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'broadcast':
+        subject = data.subject;
+        htmlContent = `
+          <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background: linear-gradient(135deg, #fff5f5 0%, #fef7cd 100%);">
+            <div style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <img src="${logoUrl}" alt="Sri Balaji Temple" style="width: 80px; height: 80px; border-radius: 50%; background: white; padding: 10px; margin-bottom: 20px;">
+              <h1 style="color: white; margin: 0; font-size: 26px;">🏛️ Sri Balaji Temple</h1>
+            </div>
+            <div style="padding: 40px 30px; background: white;">
+              ${data.content}
+            </div>
+            <div style="background: #333; color: white; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+              <p style="margin: 0;">🕉️ Sri Balaji Temple | Divine Blessings Always With You 🙏</p>
+            </div>
+          </div>
+        `;
+        break;
+
+      default:
+        throw new Error('Invalid email type');
+    }
+
     const recipients = Array.isArray(to) ? to : [to];
-
+    
     const emailResponse = await resend.emails.send({
-      from: "Sri Balaji Temple <onboarding@resend.dev>",
+      from: "Sri Balaji Temple <temple@balajitemple.com>",
       to: recipients,
-      subject: emailContent.subject,
-      html: emailContent.html,
+      subject: subject,
+      html: htmlContent,
     });
 
-    console.log(`Email sent successfully to ${recipients.length} recipient(s) for ${type}:`, emailResponse);
+    console.log("Email sent successfully:", emailResponse);
 
     return new Response(JSON.stringify(emailResponse), {
       status: 200,
@@ -317,7 +232,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
   } catch (error: any) {
-    console.error("Error in send-notification-email function:", error);
+    console.error("Error sending email:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

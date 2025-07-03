@@ -135,32 +135,26 @@ const AdminBroadcastManager = () => {
 
     setLoading(true);
     try {
-      let recipients: string[] = [];
+      let recipients: string[] = [...customEmails];
 
       if (sendToAll) {
-        // Get all user emails from user profiles
-        const { data: profiles, error } = await supabase
-          .from('user_profiles')
-          .select('user_id')
-          .limit(1000);
+        // Get all user emails from auth.users via edge function
+        const { data: authData, error: authError } = await supabase.functions.invoke('get-user-emails', {
+          body: { getAllUsers: true }
+        });
 
-        if (error) throw error;
-
-        // Get user emails from auth.users (need to use edge function for this)
-        const userIds = profiles?.map(p => p.user_id) || [];
-        
-        // For now, we'll collect emails that we can access
-        recipients = [...customEmails];
-        
-        // Add logic to get user emails from your user system
-        // This might require additional database queries or edge function
+        if (!authError && authData?.emails) {
+          recipients = [...recipients, ...authData.emails];
+        }
       } else {
-        // Send to selected users + custom emails
-        const selectedUserProfiles = allUsers.filter(user => 
-          selectedUsers.includes(user.user_id)
-        );
-        // You'd need to get emails for selected users
-        recipients = [...customEmails];
+        // Get selected user emails
+        const { data: authData, error: authError } = await supabase.functions.invoke('get-user-emails', {
+          body: { userIds: selectedUsers }
+        });
+
+        if (!authError && authData?.emails) {
+          recipients = [...recipients, ...authData.emails];
+        }
       }
 
       if (recipients.length === 0) {

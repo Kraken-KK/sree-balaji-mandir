@@ -1,14 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { CreditCard, Clock, Tag, LogIn } from 'lucide-react';
+import { CreditCard, Clock, Tag, LogIn, Calendar } from 'lucide-react';
 import { sendNotificationEmail } from '@/lib/email-service';
 
 const Services = () => {
@@ -19,6 +23,8 @@ const Services = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
+  const [selectedService, setSelectedService] = useState<any>(null);
+  const [serviceDate, setServiceDate] = useState('');
 
   useEffect(() => {
     fetchServices();
@@ -45,7 +51,7 @@ const Services = () => {
     }
   };
 
-  const handleBookService = async (service: any) => {
+  const handleBookService = async () => {
     if (!user) {
       toast({
         title: 'Authentication Required',
@@ -56,17 +62,26 @@ const Services = () => {
       return;
     }
 
-    setPaymentLoading(service.id);
+    if (!serviceDate) {
+      toast({
+        title: 'Date Required',
+        description: 'Please select a service date.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setPaymentLoading(selectedService.id);
     try {
       // Generate QR code data
-      const qrData = `TICKET:${service.id}:${user.id}:${Date.now()}`;
+      const qrData = `TICKET:${selectedService.id}:${user.id}:${Date.now()}`;
       
       // Create payment first
       const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-payment', {
         body: {
-          amount: Number(service.price),
+          amount: Number(selectedService.price),
           currency: 'inr',
-          description: service.name,
+          description: selectedService.name,
           customerEmail: user.email,
           customerName: user.user_metadata?.full_name || 'User',
           type: 'service'
@@ -86,12 +101,12 @@ const Services = () => {
         .from('tickets')
         .insert({
           user_id: user.id,
-          service_id: service.id,
+          service_id: selectedService.id,
           customer_name: user.user_metadata?.full_name || user.email.split('@')[0],
           customer_email: user.email,
           qr_code: qrData,
           ticket_number: ticketNumberData,
-          service_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 7 days from now
+          service_date: serviceDate
         })
         .select()
         .single();
@@ -107,9 +122,10 @@ const Services = () => {
         user.user_metadata?.full_name || user.email.split('@')[0],
         'service_booking',
         {
-          serviceName: service.name,
-          servicePrice: Number(service.price),
-          ticketNumber: ticketNumberData
+          serviceName: selectedService.name,
+          servicePrice: Number(selectedService.price),
+          ticketNumber: ticketNumberData,
+          serviceDate: serviceDate
         }
       );
 
@@ -120,6 +136,10 @@ const Services = () => {
         title: 'Redirecting to Payment',
         description: 'Your ticket will be generated after successful payment. Check your email for confirmation.',
       });
+
+      // Reset and close dialog
+      setServiceDate('');
+      setSelectedService(null);
     } catch (error) {
       console.error('Booking error:', error);
       toast({
@@ -199,14 +219,54 @@ const Services = () => {
                   )}
                 </div>
                 
-                <Button 
-                  onClick={() => handleBookService(service)}
-                  className="w-full temple-gradient text-white text-lg py-6"
-                  disabled={!user || paymentLoading === service.id}
-                >
-                  <CreditCard className="w-5 h-5 mr-2" />
-                  {paymentLoading === service.id ? 'Processing...' : `Book Service - ₹${Number(service.price).toLocaleString()}`}
-                </Button>
+                <Dialog open={selectedService?.id === service.id} onOpenChange={(open) => !open && setSelectedService(null)}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      onClick={() => setSelectedService(service)}
+                      className="w-full temple-gradient text-white text-lg py-6"
+                      disabled={!user}
+                    >
+                      <CreditCard className="w-5 h-5 mr-2" />
+                      Book Service - ₹{Number(service.price).toLocaleString()}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-primary" />
+                        Book {service.name}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="serviceDate">Select Service Date</Label>
+                        <Input
+                          id="serviceDate"
+                          type="date"
+                          value={serviceDate}
+                          onChange={(e) => setServiceDate(e.target.value)}
+                          min={new Date().toISOString().split('T')[0]}
+                          required
+                          className="mt-1"
+                        />
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="font-semibold mb-2">Service Details:</h4>
+                        <p><strong>Name:</strong> {service.name}</p>
+                        <p><strong>Price:</strong> ₹{Number(service.price).toLocaleString()}</p>
+                        {service.duration && <p><strong>Duration:</strong> {service.duration}</p>}
+                        <p><strong>Description:</strong> {service.description}</p>
+                      </div>
+                      <Button 
+                        onClick={handleBookService}
+                        disabled={paymentLoading === service.id || !serviceDate}
+                        className="w-full temple-gradient text-white"
+                      >
+                        {paymentLoading === service.id ? 'Processing...' : 'Confirm Booking & Pay'}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
           ))}
@@ -228,6 +288,7 @@ const Services = () => {
               <CardTitle>Booking Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
+              <p>✓ Select your preferred service date</p>
               <p>✓ Secure online payment</p>
               <p>✓ Instant booking confirmation</p>
               <p>✓ Email and SMS notifications</p>

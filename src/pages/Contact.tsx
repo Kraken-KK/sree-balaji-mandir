@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Phone, Mail, MapPin, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -22,15 +23,39 @@ const Contact = () => {
     e.preventDefault();
     setLoading(true);
     
-    // Simulate form submission
-    setTimeout(() => {
+    try {
+      // Send contact form email to admin
+      const { error } = await supabase.functions.invoke('send-notification-email', {
+        body: {
+          to: ['krakenkk54@gmail.com'],
+          name: 'Temple Admin',
+          type: 'contact_form',
+          data: {
+            customerName: formData.name,
+            customerEmail: formData.email,
+            customerPhone: formData.phone,
+            message: formData.message
+          }
+        }
+      });
+
+      if (error) throw error;
+
       toast({
         title: "Message Sent",
         description: "Thank you for contacting us. We'll get back to you soon!",
       });
       setFormData({ name: '', email: '', phone: '', message: '' });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (

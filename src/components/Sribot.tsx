@@ -3,11 +3,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { MessageCircle, Send, Minimize2, X, Bot, User, Loader2 } from 'lucide-react';
+import { MessageCircle, Send, Minimize2, X, Bot, User, Loader2, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { sendMessageToGemini } from '@/lib/gemini-fallback';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocation } from 'react-router-dom';
+import ApiKeyDialog from '@/components/ApiKeyDialog';
 
 interface Message {
   id: string;
@@ -20,6 +21,7 @@ const Sribot = () => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -40,7 +42,7 @@ const Sribot = () => {
   const { toast } = useToast();
 
   // Hide Sribot on authentication and landing pages
-  const hiddenRoutes = ['/auth', '/landing', '/signup'];
+  const hiddenRoutes = ['/auth', '/landing'];
   const shouldHide = hiddenRoutes.includes(location.pathname);
 
   useEffect(() => {
@@ -73,7 +75,7 @@ const Sribot = () => {
     };
 
     fetchRealTimeData();
-    const interval = setInterval(fetchRealTimeData, 30000); // Update every 30 seconds
+    const interval = setInterval(fetchRealTimeData, 30000);
 
     return () => clearInterval(interval);
   }, []);
@@ -218,6 +220,14 @@ const Sribot = () => {
                 <Button
                   variant="ghost"
                   size="sm"
+                  onClick={() => setShowApiKeyDialog(true)}
+                  className="text-white hover:bg-white/20 w-8 h-8 p-0"
+                >
+                  <Settings className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setIsMinimized(!isMinimized)}
                   className="text-white hover:bg-white/20 w-8 h-8 p-0"
                 >
@@ -312,6 +322,11 @@ const Sribot = () => {
           )}
         </Card>
       )}
+
+      <ApiKeyDialog 
+        isOpen={showApiKeyDialog} 
+        onClose={() => setShowApiKeyDialog(false)} 
+      />
     </>
   );
 };

@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Index from '@/pages/Index';
 import Landing from '@/pages/Landing';
-import Home from '@/pages/Home';
 import Services from '@/pages/Services';
 import Events from '@/pages/Events';
 import Donations from '@/pages/Donations';
@@ -30,8 +30,8 @@ function App() {
             <LanguageProvider>
               <div className="min-h-screen bg-background">
                 <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/home" element={<Home />} />
+                  <Route path="/" element={<Index />} />
+                  <Route path="/landing" element={<Landing />} />
                   <Route path="/services" element={<Services />} />
                   <Route path="/events" element={<Events />} />
                   <Route path="/donations" element={<Donations />} />
