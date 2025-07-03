@@ -18,13 +18,15 @@ import {
   X,
   Wrench,
   Camera,
-  UserCheck
+  UserCheck,
+  Send
 } from 'lucide-react';
 import { AdminCodeInput } from '@/components/AdminCodeInput';
 import { AdminAnalytics } from '@/components/AdminAnalytics';
 import { AdminEventManager } from '@/components/AdminEventManager';
 import { AdminServiceManager } from '@/components/AdminServiceManager';
 import { AdminGalleryManager } from '@/components/AdminGalleryManager';
+import { AdminBroadcastManager } from '@/components/AdminBroadcastManager';
 import QRScanner from '@/components/QRScanner';
 
 interface TicketData {
@@ -195,6 +197,7 @@ const AdminDashboard = () => {
   const menuItems = [
     { id: 'analytics', label: 'Analytics', icon: BarChart3, color: 'from-blue-500/20 to-cyan-500/20', iconColor: 'from-blue-500 to-cyan-500' },
     { id: 'scanner', label: 'QR Scanner', icon: QrCode, color: 'from-green-500/20 to-emerald-500/20', iconColor: 'from-green-500 to-emerald-500' },
+    { id: 'broadcast', label: 'Broadcast', icon: Send, color: 'from-yellow-500/20 to-amber-500/20', iconColor: 'from-yellow-500 to-amber-500' },
     { id: 'tickets', label: 'Tickets', icon: CreditCard, color: 'from-purple-500/20 to-violet-500/20', iconColor: 'from-purple-500 to-violet-500' },
     { id: 'events', label: 'Events', icon: Calendar, color: 'from-orange-500/20 to-red-500/20', iconColor: 'from-orange-500 to-red-500' },
     { id: 'services', label: 'Services', icon: Wrench, color: 'from-pink-500/20 to-rose-500/20', iconColor: 'from-pink-500 to-rose-500' },
@@ -382,6 +385,25 @@ const AdminDashboard = () => {
                 </div>
                 <div className="backdrop-blur-xl bg-white/5 border border-white/20 rounded-3xl p-8 shadow-2xl">
                   <QRScanner />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'broadcast' && (
+              <div className="space-y-8">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-yellow-500 to-amber-500 flex items-center justify-center shadow-2xl shadow-yellow-500/30">
+                    <Send className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold text-white bg-gradient-to-r from-yellow-400 to-amber-400 bg-clip-text text-transparent">
+                      Email Broadcast
+                    </h2>
+                    <p className="text-gray-400 text-lg">Send announcements to your community</p>
+                  </div>
+                </div>
+                <div className="bg-white/5 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
+                  <AdminBroadcastManager />
                 </div>
               </div>
             )}

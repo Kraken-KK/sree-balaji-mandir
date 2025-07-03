@@ -11,9 +11,9 @@ const corsHeaders = {
 };
 
 interface EmailRequest {
-  to: string;
-  name: string;
-  type: 'signup' | 'service_booking' | 'donation' | 'event_registration';
+  to: string | string[];
+  name?: string;
+  type: 'signup' | 'service_booking' | 'donation' | 'event_registration' | 'broadcast';
   data?: {
     serviceName?: string;
     servicePrice?: number;
@@ -22,18 +22,55 @@ interface EmailRequest {
     eventName?: string;
     eventDate?: string;
     registrationMembers?: number;
+    subject?: string;
+    content?: string;
   };
 }
 
 const getEmailContent = (type: string, name: string, data: any) => {
   const settingsUrl = `${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovableproject.com')}/settings`;
   
+  const logoHeader = `
+    <div style="text-align: center; margin-bottom: 20px;">
+      <img src="https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275" alt="Sri Balaji Temple" style="max-width: 120px; height: auto;" />
+    </div>
+  `;
+  
   switch (type) {
+    case 'broadcast':
+      return {
+        subject: data.subject || "Important Update from Sri Balaji Temple",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+            ${logoHeader}
+            <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); padding: 30px; border-radius: 10px; text-align: center; color: white;">
+              <h1 style="margin: 0; font-size: 28px;">🕉️ Message from Sri Balaji Temple</h1>
+            </div>
+            
+            <div style="background: white; padding: 30px; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              ${data.content || '<p>Greetings from Sri Balaji Temple!</p>'}
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${settingsUrl}" style="background: linear-gradient(135deg, #ff6b35, #f7931e); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
+                  Visit Temple Portal
+                </a>
+              </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px; color: #666;">
+              <p>🙏 With divine blessings</p>
+              <p style="font-style: italic;">With warm regards,<br><strong>Karthikeya</strong><br>Sri Balaji Temple</p>
+            </div>
+          </div>
+        `
+      };
+      
     case 'signup':
       return {
         subject: "Welcome to Sri Balaji Temple! 🙏",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+            ${logoHeader}
             <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); padding: 30px; border-radius: 10px; text-align: center; color: white;">
               <h1 style="margin: 0; font-size: 28px;">🕉️ Welcome to Sri Balaji Temple!</h1>
             </div>
@@ -76,6 +113,7 @@ const getEmailContent = (type: string, name: string, data: any) => {
         subject: `Service Booked Successfully - ${data.serviceName} 🛕`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+            ${logoHeader}
             <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); padding: 30px; border-radius: 10px; text-align: center; color: white;">
               <h1 style="margin: 0; font-size: 28px;">🛕 Service Booking Confirmed!</h1>
             </div>
@@ -129,6 +167,7 @@ const getEmailContent = (type: string, name: string, data: any) => {
         subject: `Donation Received - Thank You for Your Generosity 💝`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+            ${logoHeader}
             <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); padding: 30px; border-radius: 10px; text-align: center; color: white;">
               <h1 style="margin: 0; font-size: 28px;">💝 Donation Received!</h1>
             </div>
@@ -184,6 +223,7 @@ const getEmailContent = (type: string, name: string, data: any) => {
         subject: `Event Registration Confirmed - ${data.eventName} 🎉`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+            ${logoHeader}
             <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); padding: 30px; border-radius: 10px; text-align: center; color: white;">
               <h1 style="margin: 0; font-size: 28px;">🎉 Event Registration Confirmed!</h1>
             </div>
@@ -241,7 +281,7 @@ const getEmailContent = (type: string, name: string, data: any) => {
     default:
       return {
         subject: "Sri Balaji Temple Notification",
-        html: `<p>Dear ${name},<br><br>Thank you for being part of our temple community.<br><br>With regards,<br>Karthikeya<br>Sri Balaji Temple</p>`
+        html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${logoHeader}<p>Dear ${name},<br><br>Thank you for being part of our temple community.<br><br>With regards,<br>Karthikeya<br>Sri Balaji Temple</p></div>`
       };
   }
 };
@@ -255,16 +295,19 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { to, name, type, data }: EmailRequest = await req.json();
 
-    const emailContent = getEmailContent(type, name, data);
+    const emailContent = getEmailContent(type, name || 'Devotee', data);
+
+    // Handle multiple recipients for broadcast emails
+    const recipients = Array.isArray(to) ? to : [to];
 
     const emailResponse = await resend.emails.send({
       from: "Sri Balaji Temple <onboarding@resend.dev>",
-      to: [to],
+      to: recipients,
       subject: emailContent.subject,
       html: emailContent.html,
     });
 
-    console.log(`Email sent successfully to ${to} for ${type}:`, emailResponse);
+    console.log(`Email sent successfully to ${recipients.length} recipient(s) for ${type}:`, emailResponse);
 
     return new Response(JSON.stringify(emailResponse), {
       status: 200,

@@ -1,0 +1,68 @@
+
+{
+  "name": "Sri Balaji Temple",
+  "short_name": "Balaji Temple",
+  "description": "Divine Spiritual Experience - Sri Balaji Temple Mobile App",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ff6b35",
+  "theme_color": "#ff6b35",
+  "orientation": "portrait-primary",
+  "categories": ["lifestyle", "social", "spirituality"],
+  "icons": [
+    {
+      "src": "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Services",
+      "short_name": "Services",
+      "description": "Book temple services",
+      "url": "/services",
+      "icons": [
+        {
+          "src": "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "short_name": "Events",
+      "description": "View upcoming events",
+      "url": "/events",
+      "icons": [
+        {
+          "src": "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Donations",
+      "short_name": "Donate",
+      "description": "Make donations",
+      "url": "/donations",
+      "icons": [
+        {
+          "src": "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}
