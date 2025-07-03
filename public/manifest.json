@@ -1,8 +1,8 @@
 
 {
-  "name": "Sri Balaji Temple",
+  "name": "Sri Balaji Temple - Divine Spiritual Experience",
   "short_name": "Balaji Temple",
-  "description": "Divine Spiritual Experience - Sri Balaji Temple Mobile App",
+  "description": "Experience divine bliss and spiritual enlightenment through our sacred rituals, festivals, and community services.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ff6b35",
@@ -12,7 +12,43 @@
   "icons": [
     {
       "src": "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275",
       "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275",
+      "sizes": "384x384",
       "type": "image/png",
       "purpose": "any maskable"
     },
@@ -31,7 +67,7 @@
     {
       "name": "Services",
       "short_name": "Services",
-      "description": "Book temple services",
+      "description": "Book temple services and pujas",
       "url": "/services",
       "icons": [
         {
@@ -43,7 +79,7 @@
     {
       "name": "Events",
       "short_name": "Events",
-      "description": "View upcoming events",
+      "description": "View upcoming temple events and festivals",
       "url": "/events",
       "icons": [
         {
@@ -55,7 +91,7 @@
     {
       "name": "Donations",
       "short_name": "Donate",
-      "description": "Make donations",
+      "description": "Make donations to support temple activities",
       "url": "/donations",
       "icons": [
         {
@@ -63,6 +99,24 @@
           "sizes": "96x96"
         }
       ]
+    },
+    {
+      "name": "Gallery",
+      "short_name": "Gallery",
+      "description": "View temple photos and videos",
+      "url": "/gallery",
+      "icons": [
+        {
+          "src": "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275",
+          "sizes": "96x96"
+        }
+      ]
     }
-  ]
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "display_override": ["window-controls-overlay"],
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 }
