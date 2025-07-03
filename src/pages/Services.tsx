@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { CreditCard, Clock, Tag, LogIn } from 'lucide-react';
+import { sendNotificationEmail } from '@/lib/email-service';
 
 const Services = () => {
   const { t } = useLanguage();
@@ -100,12 +101,24 @@ const Services = () => {
         // Continue with payment even if ticket creation fails
       }
 
+      // Send booking confirmation email
+      await sendNotificationEmail(
+        user.email,
+        user.user_metadata?.full_name || user.email.split('@')[0],
+        'service_booking',
+        {
+          serviceName: service.name,
+          servicePrice: Number(service.price),
+          ticketNumber: ticketNumberData
+        }
+      );
+
       // Open Stripe checkout in a new tab
       window.open(paymentData.url, '_blank');
       
       toast({
         title: 'Redirecting to Payment',
-        description: 'Your ticket will be generated after successful payment.',
+        description: 'Your ticket will be generated after successful payment. Check your email for confirmation.',
       });
     } catch (error) {
       console.error('Booking error:', error);

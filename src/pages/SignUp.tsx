@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -10,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { sendNotificationEmail } from '@/lib/email-service';
 
 const SignUp = () => {
   const { t } = useLanguage();
@@ -46,6 +46,13 @@ const SignUp = () => {
         phone: signupData.phone,
         newsletter: signupData.newsletter,
       });
+      
+      // Send welcome email
+      await sendNotificationEmail(
+        signupData.email,
+        signupData.fullName || signupData.username,
+        'signup'
+      );
       
       // If user subscribed to newsletter, redirect to blog
       if (signupData.newsletter) {

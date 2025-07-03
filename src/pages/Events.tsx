@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Calendar, Clock, Users, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+import { sendNotificationEmail } from '@/lib/email-service';
 
 const Events = () => {
   const { t } = useLanguage();
@@ -39,14 +41,28 @@ const Events = () => {
     fetchEvents();
   }, [toast]);
 
-  const handleRegistration = (e: React.FormEvent) => {
+  const handleRegistration = async (e: React.FormEvent, event: any) => {
     e.preventDefault();
     console.log('Registration submitted:', registrationData);
+    
+    // Send event registration email
+    await sendNotificationEmail(
+      registrationData.email,
+      registrationData.fullName,
+      'event_registration',
+      {
+        eventName: event.name,
+        eventDate: event.date,
+        registrationMembers: registrationData.members
+      }
+    );
+    
     toast({
       title: t('registrationSuccess'),
-      description: 'You have been successfully registered for the event.',
+      description: 'You have been successfully registered for the event. Check your email for confirmation.',
     });
     setRegistrationData({ fullName: '', email: '', phone: '', members: 1 });
+    setOpenDialogId(null);
   };
 
   const EventCard = ({ event, index }: { event: any; index: number }) => (
@@ -102,7 +118,7 @@ const Events = () => {
                 Register for {event.name}
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleRegistration} className="space-y-4">
+            <form onSubmit={(e) => handleRegistration(e, event)} className="space-y-4">
               <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
                 <Label htmlFor="fullName">{t('fullName')}</Label>
                 <Input
