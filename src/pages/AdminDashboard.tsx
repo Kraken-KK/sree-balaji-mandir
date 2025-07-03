@@ -26,7 +26,7 @@ import { AdminAnalytics } from '@/components/AdminAnalytics';
 import { AdminEventManager } from '@/components/AdminEventManager';
 import { AdminServiceManager } from '@/components/AdminServiceManager';
 import { AdminGalleryManager } from '@/components/AdminGalleryManager';
-import { AdminBroadcastManager } from '@/components/AdminBroadcastManager';
+import AdminBroadcastManager from '@/components/AdminBroadcastManager';
 import QRScanner from '@/components/QRScanner';
 
 interface TicketData {
