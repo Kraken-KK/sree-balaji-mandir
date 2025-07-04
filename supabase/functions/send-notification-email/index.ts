@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 
@@ -261,7 +262,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Sending email to:', recipients, 'with subject:', subject);
     
     const emailResponse = await resend.emails.send({
-      from: "Sri Balaji Temple <temple@balajitemple.com>",
+      from: "Sri Balaji Temple <onboarding@resend.dev>",
       to: recipients,
       subject: subject,
       html: htmlContent,

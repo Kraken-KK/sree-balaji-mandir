@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { User, Moon, Sun, Globe, Shield, Info } from 'lucide-react';
+import { User, Moon, Sun, Globe, Shield, Info, RefreshCw } from 'lucide-react';
 import NotificationSettings from '@/components/NotificationSettings';
 import UserHistorySection from '@/components/UserHistorySection';
+import ServiceCancellation from '@/components/ServiceCancellation';
 
 const Settings = () => {
   const { user, signOut } = useAuth();
@@ -53,7 +54,7 @@ const Settings = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <img 
-            src="https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275" 
+            src="/lovable-uploads/7b3b360d-af81-4d6e-a115-8e6e878163a7.png" 
             alt="Sri Balaji Temple" 
             className="w-20 h-20 mx-auto mb-4 rounded-full bg-white shadow-lg p-2"
           />
@@ -96,6 +97,9 @@ const Settings = () => {
 
           {/* User History Section */}
           <UserHistorySection />
+
+          {/* Service Cancellation Section */}
+          <ServiceCancellation />
 
           {/* Notification Settings */}
           <NotificationSettings />
