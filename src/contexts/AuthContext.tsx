@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import SubscriberDialog from '@/components/SubscriberDialog';
 
 interface AuthContextType {
   user: User | null;
@@ -34,6 +35,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showSubscriberDialog, setShowSubscriberDialog] = useState(false);
+  const [subscriberData, setSubscriberData] = useState<{email: string, name: string}>({email: '', name: ''});
   const { toast } = useToast();
 
   const ADMIN_CODE = "551010";
@@ -76,6 +79,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 checkAdminStatus(session.user);
               }
             }, 0);
+            
+            // Show subscriber dialog for new users
+            if (event === 'SIGNED_UP' || event === 'SIGNED_IN') {
+              const hasSeenDialog = localStorage.getItem('newsletter_dialog_shown');
+              if (!hasSeenDialog) {
+                setTimeout(() => {
+                  setSubscriberData({
+                    email: session.user.email || '',
+                    name: session.user.user_metadata?.full_name || 'User'
+                  });
+                  setShowSubscriberDialog(true);
+                  localStorage.setItem('newsletter_dialog_shown', 'true');
+                }, 1500);
+              }
+            }
           } else {
             setIsAdmin(false);
           }
@@ -352,6 +370,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       checkAdminCode,
     }}>
       {children}
+      <SubscriberDialog
+        open={showSubscriberDialog}
+        onClose={() => setShowSubscriberDialog(false)}
+        userEmail={subscriberData.email}
+        userName={subscriberData.name}
+      />
     </AuthContext.Provider>
   );
 };

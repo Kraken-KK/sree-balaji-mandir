@@ -444,4 +444,14 @@ const Sribot = () => {
   );
 };
 
+// Helper function for multilingual welcome messages
+function getWelcomeMessage(lang: string): string {
+  const messages = {
+    en: "🙏 Namaste! I'm Sribot, your spiritual guide for Sri Balaji Temple. How can I assist you with temple services, events, or spiritual guidance today?",
+    hi: "🙏 नमस्ते! मैं श्रीबॉट हूं, श्री बालाजी मंदिर का आपका आध्यात्मिक मार्गदर्शक। मैं आज मंदिर सेवाओं, कार्यक्रमों या आध्यात्मिक मार्गदर्शन में आपकी कैसे सहायता कर सकता हूं?",
+    te: "🙏 నమస్తే! నేను శ్రీబాట్, శ్రీ బాలాజీ దేవాలయానికి మీ ఆధ్యాత్మిక మార్గదర్శకుడిని. దేవాలయ సేవలు, కార్యక్రమాలు లేదా ఆధ్యాత్మిక మార్గదర్శనంలో నేను ఈరోజు మీకు ఎలా సహాయం చేయగలను?"
+  };
+  return messages[lang as keyof typeof messages] || messages.en;
+}
+
 export default Sribot;

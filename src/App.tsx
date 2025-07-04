@@ -10,6 +10,7 @@ import Gallery from '@/pages/Gallery';
 import Contact from '@/pages/Contact';
 import Auth from '@/pages/Auth';
 import Settings from '@/pages/Settings';
+import History from '@/pages/History';
 import AdminDashboard from '@/pages/AdminDashboard';
 import PaymentSuccess from '@/pages/PaymentSuccess';
 import Sribot from '@/components/Sribot';
@@ -40,6 +41,7 @@ function App() {
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/history" element={<History />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/payment-success" element={<PaymentSuccess />} />
                 </Routes>

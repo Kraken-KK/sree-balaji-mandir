@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,7 +10,7 @@ const History = () => {
 
   const timelineEvents = [
     {
-      year: '2000',
+      year: '1875',
       title: 'Foundation of the Temple',
       description: 'The sacred ground was blessed and construction began under the guidance of Sri Venkateshwara Swami.',
       image: 'https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&w=800&q=80',
@@ -50,7 +49,7 @@ const History = () => {
   const managementFamily = [
     {
       name: 'Ramarapu Charan',
-      position: 'Cheif Organiser',
+      position: 'Chief Organiser',
       since: '2000',
       image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
       description: 'Leading daily rituals and spiritual guidance for over 25 years.',
@@ -86,7 +85,7 @@ const History = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <Navbar />
       
       <div className="container mx-auto px-4 py-12">
@@ -173,7 +172,7 @@ const History = () => {
                       />
                     </div>
                     <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-                      <Badge className="temple-gradient text-white">
+                      <Badge className="bg-gradient-to-r from-primary to-accent text-white">
                         Since {member.since}
                       </Badge>
                     </div>
@@ -192,8 +191,7 @@ const History = () => {
         </section>
 
         {/* Achievements Section */}
-        <section className="mb-20 bg-surface-light dark:bg-surface-dark rounded-2xl p-12 relative overflow-hidden">
-          {/* Background decorations */}
+        <section className="mb-20 bg-gradient-to-r from-primary/5 to-accent/5 rounded-2xl p-12 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -translate-y-16 translate-x-16" />
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-accent/10 rounded-full translate-y-12 -translate-x-12" />
           
@@ -223,7 +221,7 @@ const History = () => {
 
         {/* Call to Action */}
         <section className="text-center animate-fade-in">
-          <Card className="p-12 temple-gradient text-white relative overflow-hidden">
+          <Card className="p-12 bg-gradient-to-r from-primary to-accent text-white relative overflow-hidden">
             <div className="absolute inset-0 bg-white/10 opacity-20" />
             <div className="relative z-10">
               <h2 className="text-3xl font-bold mb-4">Be Part of Our Legacy</h2>

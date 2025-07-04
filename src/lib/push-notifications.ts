@@ -97,7 +97,7 @@ class PushNotificationService {
               title: 'Close'
             }
           ]
-        });
+        } as any);
       } else {
         // Fallback to basic Notification API without actions
         new Notification(payload.title, {
