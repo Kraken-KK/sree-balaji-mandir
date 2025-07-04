@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { MessageCircle, Send, Minimize2, X, Bot, User, Loader2, Settings } from 'lucide-react';
+import { MessageCircle, Send, Minimize2, X, Bot, User, Loader2, Settings, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { sendMessageToGemini } from '@/lib/gemini-fallback';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,6 +44,9 @@ const Sribot = () => {
   // Hide Sribot on authentication and landing pages
   const hiddenRoutes = ['/auth', '/landing'];
   const shouldHide = hiddenRoutes.includes(location.pathname);
+
+  // Check if mobile device
+  const isMobile = window.innerWidth <= 768;
 
   useEffect(() => {
     scrollToBottom();
@@ -198,8 +201,118 @@ const Sribot = () => {
         </Button>
       )}
 
-      {/* Chat Window */}
-      {isOpen && (
+      {/* Chat Window - Mobile Full Screen */}
+      {isOpen && isMobile && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+          {/* Header */}
+          <div className="temple-gradient text-white p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsOpen(false)}
+                className="text-white hover:bg-white/20 w-10 h-10 p-0"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <Bot className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Sribot</h3>
+                  <p className="text-xs opacity-75">Temple Assistant</p>
+                </div>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowApiKeyDialog(true)}
+              className="text-white hover:bg-white/20 w-8 h-8 p-0"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-br from-orange-50 to-yellow-50">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex gap-3 ${message.isBot ? 'justify-start' : 'justify-end'}`}
+              >
+                {message.isBot && (
+                  <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                )}
+                <div
+                  className={`max-w-[75%] p-3 rounded-2xl shadow-md ${
+                    message.isBot
+                      ? 'bg-white border border-orange-100 text-gray-800'
+                      : 'bg-gradient-to-br from-orange-500 to-red-500 text-white'
+                  }`}
+                >
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                  <p className={`text-xs mt-2 opacity-70 ${message.isBot ? 'text-gray-500' : 'text-orange-100'}`}>
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                {!message.isBot && (
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                )}
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex gap-3 justify-start">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
+                <div className="bg-white border border-orange-100 p-3 rounded-2xl shadow-md">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+                    <span className="text-sm text-gray-600">Sribot is thinking...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input - Floating curved box */}
+          <div className="p-4 bg-white/95 backdrop-blur-sm">
+            <div className="bg-white rounded-full shadow-lg p-2 border border-orange-200">
+              <div className="flex gap-2 items-center">
+                <Input
+                  ref={inputRef}
+                  placeholder="Ask me about temple services, events, or guidance..."
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  disabled={isLoading}
+                  className="flex-1 border-0 focus:ring-0 focus:border-0 bg-transparent"
+                />
+                <Button
+                  onClick={sendMessage}
+                  disabled={isLoading || !inputMessage.trim()}
+                  className="temple-gradient text-white hover:shadow-lg transition-all duration-200 rounded-full w-12 h-12 p-0"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              🙏 Powered by divine AI • Real-time temple data
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Chat Window - Desktop */}
+      {isOpen && !isMobile && (
         <Card className={`fixed bottom-6 right-6 w-96 transition-all duration-300 z-50 shadow-2xl border-2 border-orange-200/50 ${
           isMinimized ? 'h-16' : 'h-[500px]'
         }`}>

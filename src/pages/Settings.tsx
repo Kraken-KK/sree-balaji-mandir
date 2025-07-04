@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { User, Moon, Sun, Globe, Bell, Shield, Info } from 'lucide-react';
+import { User, Moon, Sun, Globe, Shield, Info } from 'lucide-react';
 import NotificationSettings from '@/components/NotificationSettings';
+import UserHistorySection from '@/components/UserHistorySection';
 
 const Settings = () => {
   const { user, signOut } = useAuth();
@@ -52,31 +53,39 @@ const Settings = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <img 
-            src="https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updizedAt=1748613989275" 
+            src="https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275" 
             alt="Sri Balaji Temple" 
             className="w-20 h-20 mx-auto mb-4 rounded-full bg-white shadow-lg p-2"
           />
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Settings</h1>
-          <p className="text-gray-600">Manage your preferences</p>
+          <p className="text-gray-600">Manage your preferences and view your history</p>
         </div>
 
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6">
           {/* Profile Section */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="w-5 h-5" />
-                Profile
+                Profile & Account Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium">Email</Label>
-                <p className="text-gray-600">{user.email}</p>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Email</Label>
+                  <p className="text-gray-600 bg-gray-50 p-2 rounded">{user.email}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">User ID</Label>
+                  <p className="text-xs text-gray-500 font-mono bg-gray-50 p-2 rounded break-all">{user.id}</p>
+                </div>
               </div>
               <div>
-                <Label className="text-sm font-medium">User ID</Label>
-                <p className="text-xs text-gray-500 font-mono">{user.id}</p>
+                <Label className="text-sm font-medium">Full Name</Label>
+                <p className="text-gray-600 bg-gray-50 p-2 rounded">
+                  {user.user_metadata?.full_name || 'Not provided'}
+                </p>
               </div>
               <Separator />
               <Button onClick={handleSignOut} variant="outline" className="w-full">
@@ -84,6 +93,9 @@ const Settings = () => {
               </Button>
             </CardContent>
           </Card>
+
+          {/* User History Section */}
+          <UserHistorySection />
 
           {/* Notification Settings */}
           <NotificationSettings />
@@ -194,7 +206,7 @@ const Settings = () => {
             <CardContent className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm">Version</span>
-                <span className="text-sm text-muted-foreground">1.0.0</span>
+                <span className="text-sm text-muted-foreground">2.0.0</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">Last Updated</span>
@@ -202,7 +214,7 @@ const Settings = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">Build</span>
-                <span className="text-sm text-muted-foreground">PWA-2025.1</span>
+                <span className="text-sm text-muted-foreground">PWA-2025.2</span>
               </div>
             </CardContent>
           </Card>
