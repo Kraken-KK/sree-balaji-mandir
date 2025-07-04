@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 
@@ -25,10 +24,12 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { to, name, type, data }: EmailRequest = await req.json();
     
+    console.log('Email request received:', { to, name, type, data });
+    
     let subject = '';
     let htmlContent = '';
     
-    const logoUrl = "https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275";
+    const logoUrl = "/lovable-uploads/7b3b360d-af81-4d6e-a115-8e6e878163a7.png";
 
     switch (type) {
       case 'signup':
@@ -36,7 +37,7 @@ const handler = async (req: Request): Promise<Response> => {
         htmlContent = `
           <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background: linear-gradient(135deg, #fff5f5 0%, #fef7cd 100%);">
             <div style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <img src="${logoUrl}" alt="Sri Balaji Temple" style="width: 80px; height: 80px; border-radius: 50%; background: white; padding: 10px; margin-bottom: 20px;">
+              <img src="${logoUrl}" alt="Sri Balaji Temple" style="width: 80px; height: 80px; border-radius: 15px; margin-bottom: 20px;">
               <h1 style="color: white; margin: 0; font-size: 28px;">🙏 Welcome to Our Divine Community!</h1>
             </div>
             <div style="padding: 40px 30px; background: white;">
@@ -73,11 +74,11 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case 'service_booking':
-        subject = `🎪 Service Booking Confirmation - ${data.serviceName}`;
+        subject = `🎪 Service Booking Confirmation - ${data?.serviceName || 'Temple Service'}`;
         htmlContent = `
           <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background: linear-gradient(135deg, #fff5f5 0%, #fef7cd 100%);">
             <div style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <img src="${logoUrl}" alt="Sri Balaji Temple" style="width: 80px; height: 80px; border-radius: 50%; background: white; padding: 10px; margin-bottom: 20px;">
+              <img src="${logoUrl}" alt="Sri Balaji Temple" style="width: 80px; height: 80px; border-radius: 15px; margin-bottom: 20px;">
               <h1 style="color: white; margin: 0; font-size: 26px;">🛕 Service Booking Confirmed!</h1>
             </div>
             <div style="padding: 40px 30px; background: white;">
@@ -88,10 +89,10 @@ const handler = async (req: Request): Promise<Response> => {
               <div style="background: #fef7cd; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #ff6b35;">
                 <h3 style="color: #ff6b35; margin-top: 0;">📋 Booking Details:</h3>
                 <ul style="color: #333; line-height: 1.8; list-style: none; padding: 0;">
-                  <li><strong>🛕 Service:</strong> ${data.serviceName}</li>
-                  <li><strong>💰 Amount:</strong> ₹${data.servicePrice.toLocaleString()}</li>
-                  <li><strong>🎫 Ticket Number:</strong> ${data.ticketNumber}</li>
-                  <li><strong>📅 Service Date:</strong> ${data.serviceDate}</li>
+                  <li><strong>🛕 Service:</strong> ${data?.serviceName || 'Temple Service'}</li>
+                  <li><strong>💰 Amount:</strong> ₹${data?.servicePrice?.toLocaleString() || '0'}</li>
+                  <li><strong>🎫 Ticket Number:</strong> ${data?.ticketNumber || 'N/A'}</li>
+                  <li><strong>📅 Service Date:</strong> ${data?.serviceDate || 'To be confirmed'}</li>
                 </ul>
               </div>
               <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -110,6 +111,48 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             <div style="background: #333; color: white; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
               <p style="margin: 0;">🕉️ Sri Balaji Temple | Your Spiritual Journey Continues 🙏</p>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'donation_receipt':
+        subject = `🙏 Thank You for Your Donation - Sri Balaji Temple`;
+        htmlContent = `
+          <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background: linear-gradient(135deg, #fff5f5 0%, #fef7cd 100%);">
+            <div style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <img src="${logoUrl}" alt="Sri Balaji Temple" style="width: 80px; height: 80px; border-radius: 15px; margin-bottom: 20px;">
+              <h1 style="color: white; margin: 0; font-size: 26px;">🙏 Thank You for Your Donation!</h1>
+            </div>
+            <div style="padding: 40px 30px; background: white;">
+              <h2 style="color: #ff6b35; margin-bottom: 20px;">🙏 Namaste ${name}!</h2>
+              <p style="color: #333; line-height: 1.6; margin-bottom: 25px; font-size: 16px;">
+                Your generous donation has been received with gratitude. May the divine bless you abundantly.
+              </p>
+              <div style="background: #fef7cd; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #ff6b35;">
+                <h3 style="color: #ff6b35; margin-top: 0;">💝 Donation Details:</h3>
+                <ul style="color: #333; line-height: 1.8; list-style: none; padding: 0;">
+                  <li><strong>💰 Amount:</strong> ₹${data?.donationAmount?.toLocaleString() || '0'}</li>
+                  <li><strong>📅 Date:</strong> ${new Date().toLocaleDateString('en-IN')}</li>
+                  <li><strong>🎯 Purpose:</strong> ${data?.purpose || 'General Temple Fund'}</li>
+                </ul>
+              </div>
+              <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p style="color: #2d5a2d; margin: 0; font-weight: bold; text-align: center;">
+                  📄 This donation is eligible for 80G tax benefits
+                </p>
+              </div>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://sree-balaji-mandir.lovable.app/" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold;">
+                  🏛️ Visit Temple Website
+                </a>
+              </div>
+              <p style="color: #666; font-style: italic; text-align: center; margin-top: 30px;">
+                "दानं वै यज्ञः" - Charity itself is worship 🙏
+              </p>
+            </div>
+            <div style="background: #333; color: white; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+              <p style="margin: 0;">🕉️ Sri Balaji Temple | Your Generosity Blesses All 🙏</p>
             </div>
           </div>
         `;
@@ -214,6 +257,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const recipients = Array.isArray(to) ? to : [to];
+    
+    console.log('Sending email to:', recipients, 'with subject:', subject);
     
     const emailResponse = await resend.emails.send({
       from: "Sri Balaji Temple <temple@balajitemple.com>",

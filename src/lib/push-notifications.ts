@@ -83,8 +83,8 @@ class PushNotificationService {
         const registration = await navigator.serviceWorker.ready;
         await registration.showNotification(payload.title, {
           body: payload.body,
-          icon: payload.icon || 'https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275',
-          badge: payload.badge || 'https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275',
+          icon: payload.icon || '/lovable-uploads/7b3b360d-af81-4d6e-a115-8e6e878163a7.png',
+          badge: payload.badge || '/lovable-uploads/7b3b360d-af81-4d6e-a115-8e6e878163a7.png',
           tag: payload.tag || 'temple-notification',
           requireInteraction: true,
           actions: payload.actions || [
@@ -99,10 +99,10 @@ class PushNotificationService {
           ]
         });
       } else {
-        // Fallback to basic Notification API without actions (actions not supported)
+        // Fallback to basic Notification API without actions
         new Notification(payload.title, {
           body: payload.body,
-          icon: payload.icon || 'https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275'
+          icon: payload.icon || '/lovable-uploads/7b3b360d-af81-4d6e-a115-8e6e878163a7.png'
         });
       }
     }

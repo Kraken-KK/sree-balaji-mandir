@@ -14,7 +14,7 @@ const urlsToCache = [
   '/donations',
   '/gallery',
   '/contact',
-  'https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275'
+  '/lovable-uploads/7b3b360d-af81-4d6e-a115-8e6e878163a7.png'
 ];
 
 // Install event
@@ -95,15 +95,15 @@ self.addEventListener('push', function(event) {
   let notificationData = {
     title: 'Sri Balaji Temple',
     body: 'You have a new notification from the temple',
-    icon: 'https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275',
-    badge: 'https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275',
+    icon: '/lovable-uploads/7b3b360d-af81-4d6e-a115-8e6e878163a7.png',
+    badge: '/lovable-uploads/7b3b360d-af81-4d6e-a115-8e6e878163a7.png',
     tag: 'temple-notification',
     requireInteraction: true,
     actions: [
       {
         action: 'view',
         title: 'View',
-        icon: 'https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275'
+        icon: '/lovable-uploads/7b3b360d-af81-4d6e-a115-8e6e878163a7.png'
       },
       {
         action: 'close',

@@ -11,6 +11,7 @@ import Contact from '@/pages/Contact';
 import Auth from '@/pages/Auth';
 import Settings from '@/pages/Settings';
 import AdminDashboard from '@/pages/AdminDashboard';
+import PaymentSuccess from '@/pages/PaymentSuccess';
 import Sribot from '@/components/Sribot';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -40,6 +41,7 @@ function App() {
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/payment-success" element={<PaymentSuccess />} />
                 </Routes>
                 <Toaster />
                 <Sribot />
