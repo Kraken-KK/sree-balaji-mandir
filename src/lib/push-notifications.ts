@@ -99,6 +99,7 @@ class PushNotificationService {
           ]
         });
       } else {
+        // Fallback to basic Notification API without actions
         new Notification(payload.title, {
           body: payload.body,
           icon: payload.icon || 'https://ik.imagekit.io/balaji2025/tirumeni-removebg-preview.png?updatedAt=1748613989275'
