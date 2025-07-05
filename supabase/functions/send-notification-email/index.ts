@@ -13,7 +13,7 @@ const corsHeaders = {
 interface EmailRequest {
   to: string | string[];
   name: string;
-  type: 'signup' | 'service_booking' | 'event_registration' | 'donation_receipt' | 'broadcast' | 'contact_form';
+  type: 'signup' | 'service_booking' | 'event_registration' | 'donation_receipt' | 'broadcast' | 'contact_form' | 'newsletter_signup';
   data?: any;
 }
 
@@ -248,6 +248,52 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             <div style="background: #333; color: white; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
               <p style="margin: 0;">🕉️ Sri Balaji Temple | Divine Blessings Always With You 🙏</p>
+            </div>
+          </div>
+        `;
+        break;
+
+      case 'newsletter_signup':
+        subject = '🙏 Welcome to Sri Balaji Temple Newsletter!';
+        htmlContent = `
+          <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background: linear-gradient(135deg, #fff5f5 0%, #fef7cd 100%);">
+            <div style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <img src="${logoUrl}" alt="Sri Balaji Temple" style="width: 80px; height: 80px; border-radius: 15px; margin-bottom: 20px;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">📧 Newsletter Subscription Confirmed!</h1>
+            </div>
+            <div style="padding: 40px 30px; background: white;">
+              <h2 style="color: #ff6b35; margin-bottom: 20px;">🙏 Namaste ${name}!</h2>
+              <p style="color: #333; line-height: 1.6; margin-bottom: 20px; font-size: 16px;">
+                Thank you for subscribing to our divine newsletter! You'll now receive weekly updates about:
+              </p>
+              <div style="background: #fef7cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff6b35;">
+                <ul style="color: #333; line-height: 1.8; margin: 0;">
+                  <li>🎪 Upcoming festivals and special events</li>
+                  <li>🛕 New temple services and offerings</li>
+                  <li>📿 Daily spiritual thoughts and mantras</li>
+                  <li>📸 Temple photo updates and videos</li>
+                  <li>🎁 Exclusive devotee content and insights</li>
+                </ul>
+              </div>
+              <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p style="color: #2d5a2d; margin: 0; font-weight: bold; text-align: center;">
+                  📅 Your first newsletter will arrive within 7 days
+                </p>
+              </div>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://sree-balaji-mandir.lovable.app/" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px;">
+                  🏛️ Visit Temple Website
+                </a>
+              </div>
+              <p style="color: #666; font-style: italic; text-align: center; margin-top: 30px;">
+                "ॐ शान्ति शान्ति शान्तिः" - Om Peace Peace Peace 🕉️
+              </p>
+            </div>
+            <div style="background: #333; color: white; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+              <p style="margin: 0;">🕉️ Sri Balaji Temple | Divine News in Your Inbox 🙏</p>
+              <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.7;">
+                You can unsubscribe at any time by visiting our website
+              </p>
             </div>
           </div>
         `;

@@ -20,7 +20,7 @@ interface EmailData {
 export const sendNotificationEmail = async (
   to: string,
   name: string,
-  type: 'signup' | 'service_booking' | 'donation' | 'event_registration' | 'broadcast' | 'contact_form',
+  type: 'signup' | 'service_booking' | 'donation' | 'event_registration' | 'broadcast' | 'contact_form' | 'newsletter_signup',
   data?: EmailData
 ) => {
   try {

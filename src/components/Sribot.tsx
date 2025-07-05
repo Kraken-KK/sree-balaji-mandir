@@ -130,13 +130,18 @@ const Sribot = () => {
     setIsLoading(true);
 
     try {
-      const enhancedMessage = enhanceMessageWithRealTimeData(inputMessage.trim());
+      // Detect language and enhance message
+      const detectedLanguage = detectLanguage(inputMessage.trim());
+      const enhancedMessage = enhanceMessageWithRealTimeData(getMultilingualPrompt(inputMessage.trim(), detectedLanguage));
       
       // Try Supabase function first
       let botResponse: string;
       try {
         const { data, error } = await supabase.functions.invoke('sribot-chat', {
-          body: { message: enhancedMessage }
+          body: { 
+            message: enhancedMessage,
+            language: detectedLanguage 
+          }
         });
 
         if (error) throw error;
@@ -172,6 +177,28 @@ const Sribot = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Language detection function
+  const detectLanguage = (text: string): string => {
+    // Simple language detection based on script
+    if (/[\u0900-\u097F]/.test(text)) return 'hi'; // Devanagari
+    if (/[\u0C00-\u0C7F]/.test(text)) return 'te'; // Telugu
+    if (/[\u0B80-\u0BFF]/.test(text)) return 'ta'; // Tamil
+    if (/[\u0C80-\u0CFF]/.test(text)) return 'kn'; // Kannada
+    
+    // Check for common words
+    const hindiWords = ['नमस्ते', 'धन्यवाद', 'कैसे', 'क्या', 'मंदिर', 'पूजा'];
+    const teluguWords = ['నమస్తే', 'ధన్యవాదములు', 'ఎలా', 'ఏమి', 'దేవాలయం', 'పూజ'];
+    const tamilWords = ['வணக்கம்', 'நன்றி', 'எப்படி', 'என்ன', 'கோவில்', 'பூஜை'];
+    const kannadaWords = ['ನಮಸ್ಕಾರ', 'ಧನ್ಯವಾದ', 'ಹೇಗೆ', 'ಏನು', 'ದೇವಾಲಯ', 'ಪೂಜೆ'];
+    
+    if (hindiWords.some(word => text.includes(word))) return 'hi';
+    if (teluguWords.some(word => text.includes(word))) return 'te';
+    if (tamilWords.some(word => text.includes(word))) return 'ta';
+    if (kannadaWords.some(word => text.includes(word))) return 'kn';
+    
+    return 'en'; // Default to English
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -444,12 +471,28 @@ const Sribot = () => {
   );
 };
 
+// Enhanced multilingual capabilities
+const getMultilingualPrompt = (message: string, language: string = 'en') => {
+  const languageInstructions = {
+    en: "Respond in English with occasional Sanskrit mantras",
+    hi: "हिंदी में उत्तर दें और संस्कृत मंत्रों का उपयोग करें",
+    te: "తెలుగులో సమాధానం ఇవ్వండి మరియు సంస్కృత మంత్రాలను ఉపయోగించండి",
+    ta: "தமிழில் பதிலளிக்கவும் மற்றும் சமஸ்கிருத மந்திரங்களைப் பயன்படுத்தவும்",
+    kn: "ಕನ್ನಡದಲ್ಲಿ ಉತ್ತರಿಸಿ ಮತ್ತು ಸಂಸ್ಕೃತ ಮಂತ್ರಗಳನ್ನು ಬಳಸಿ"
+  };
+
+  const instruction = languageInstructions[language as keyof typeof languageInstructions] || languageInstructions.en;
+  return `${instruction}. User message: ${message}`;
+};
+
 // Helper function for multilingual welcome messages
 function getWelcomeMessage(lang: string): string {
   const messages = {
-    en: "🙏 Namaste! I'm Sribot, your spiritual guide for Sri Balaji Temple. How can I assist you with temple services, events, or spiritual guidance today?",
-    hi: "🙏 नमस्ते! मैं श्रीबॉट हूं, श्री बालाजी मंदिर का आपका आध्यात्मिक मार्गदर्शक। मैं आज मंदिर सेवाओं, कार्यक्रमों या आध्यात्मिक मार्गदर्शन में आपकी कैसे सहायता कर सकता हूं?",
-    te: "🙏 నమస్తే! నేను శ్రీబాట్, శ్రీ బాలాజీ దేవాలయానికి మీ ఆధ్యాత్మిక మార్గదర్శకుడిని. దేవాలయ సేవలు, కార్యక్రమాలు లేదా ఆధ్యాత్మిక మార్గదర్శనంలో నేను ఈరోజు మీకు ఎలా సహాయం చేయగలను?"
+    en: "🙏 Namaste! I'm Sribot, your spiritual guide for Sri Balaji Temple. I can help you in multiple languages - English, Hindi, Telugu, Tamil, and Kannada. How can I assist you with temple services, events, or spiritual guidance today?",
+    hi: "🙏 नमस्ते! मैं श्रीबॉट हूं, श्री बालाजी मंदिर का आपका आध्यात्मिक मार्गदर्शक। मैं कई भाषाओं में सहायता कर सकता हूं। मैं आज मंदिर सेवाओं, कार्यक्रमों या आध्यात्मिक मार्गदर्शन में आपकी कैसे सहायता कर सकता हूं?",
+    te: "🙏 నమస్తే! నేను శ్రీబాట్, శ్రీ బాలాజీ దేవాలయానికి మీ ఆధ్యాత్మిక మార్గదర్శకుడిని। నేను అనేక భాషల్లో సహాయం చేయగలను। దేవాలయ సేవలు, కార్యక్రమాలు లేదా ఆధ్యాత్మిక మార్గదర్శనంలో నేను ఈరోజు మీకు ఎలా సహాయం చేయగలను?",
+    ta: "🙏 வணக்கம்! நான் ஸ்ரீபாட், ஸ்ரீ பாலாஜி கோவிலுக்கான உங்கள் ஆன்மிக வழிகாட்டி. நான் பல மொழிகளில் உதவ முடியும். கோவில் சேவைகள், நிகழ்வுகள் அல்லது ஆன்மிக வழிகாட்டுதலில் இன்று நான் உங்களுக்கு எப்படி உதவ முடியும்?",
+    kn: "🙏 ನಮಸ್ಕಾರ! ನಾನು ಶ್ರೀಬಾಟ್, ಶ್ರೀ ಬಾಲಾಜಿ ದೇವಾಲಯಕ್ಕೆ ನಿಮ್ಮ ಆಧ್ಯಾತ್ಮಿಕ ಮಾರ್ಗದರ್ಶಿ. ನಾನು ಅನೇಕ ಭಾಷೆಗಳಲ್ಲಿ ಸಹಾಯ ಮಾಡಬಹುದು. ದೇವಾಲಯ ಸೇವೆಗಳು, ಕಾರ್ಯಕ್ರಮಗಳು ಅಥವಾ ಆಧ್ಯಾತ್ಮಿಕ ಮಾರ್ಗದರ್ಶನದಲ್ಲಿ ನಾನು ಇಂದು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?"
   };
   return messages[lang as keyof typeof messages] || messages.en;
 }

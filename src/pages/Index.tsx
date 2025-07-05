@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Link } from 'react-router-dom';
 import { Sparkles, Calendar, Image, Heart, Users, Award } from 'lucide-react';
+import NewsletterSubscription from '@/components/NewsletterSubscription';
 
 const Index = () => {
   const { t } = useLanguage();
@@ -226,20 +227,7 @@ const Index = () => {
                 <p className="hover:text-white transition-colors">Email: info@sribalajiTemple.org</p>
               </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '0.6s' }}>
-              <h3 className="text-xl font-semibold mb-4">Newsletter</h3>
-              <p className="text-gray-300 mb-4">Subscribe for temple updates</p>
-              <div className="flex gap-2">
-                <input 
-                  type="email" 
-                  placeholder="Your email" 
-                  className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded text-white placeholder-gray-400 focus:outline-none focus:border-primary transition-colors"
-                />
-                <Button className="temple-gradient hover:scale-105 transition-transform">
-                  Subscribe
-                </Button>
-              </div>
-            </div>
+            <NewsletterSubscription />
           </div>
           <div className="border-t border-gray-700 mt-12 pt-8 text-center text-gray-400 animate-fade-in" style={{ animationDelay: '0.8s' }}>
             <p>&copy; 2024 Sri Balaji Temple. All rights reserved. Made with ❤️ for our devotees.</p>
