@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { sendNotificationEmail } from '@/lib/email-service';
-import { supabase } from '@/integrations/supabase/client';
 
 const NewsletterSubscription = () => {
   const [email, setEmail] = useState('');
@@ -22,29 +21,22 @@ const NewsletterSubscription = () => {
 
     setIsSubscribing(true);
     try {
-      // Store newsletter subscription in database
-      const { data: subscriptionData, error: subscriptionError } = await supabase
-        .from('newsletter_subscribers')
-        .insert({
-          email,
-          subscribed_at: new Date().toISOString(),
-          is_active: true
-        })
-        .select()
-        .single();
-
-      if (subscriptionError) {
-        if (subscriptionError.code === '23505') { // Unique constraint violation
-          toast({
-            title: "Already Subscribed",
-            description: "This email is already subscribed to our newsletter.",
-            variant: "destructive"
-          });
-          setIsSubscribing(false);
-          return;
-        }
-        throw subscriptionError;
+      // For now, store in localStorage until database types are updated
+      const existingSubscribers = JSON.parse(localStorage.getItem('newsletter_subscribers') || '[]');
+      
+      if (existingSubscribers.includes(email)) {
+        toast({
+          title: "Already Subscribed",
+          description: "This email is already subscribed to our newsletter.",
+          variant: "destructive"
+        });
+        setIsSubscribing(false);
+        return;
       }
+
+      // Add to localStorage
+      existingSubscribers.push(email);
+      localStorage.setItem('newsletter_subscribers', JSON.stringify(existingSubscribers));
 
       // Send welcome email
       await sendNotificationEmail(

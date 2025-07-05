@@ -119,14 +119,27 @@ serve(async (req) => {
   }
 
   try {
-    const { message } = await req.json();
+    const { message, language = 'en' } = await req.json();
     
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
     if (!geminiApiKey) {
       throw new Error('Gemini API key not configured');
     }
 
-    const prompt = `You are Sribot, the AI assistant for Sri Balaji Temple. You are knowledgeable, helpful, and speak with devotion and respect. Always start responses with appropriate greetings like "🙏" or "Namaste".
+    // Enhanced multilingual prompt based on detected language
+    const languageInstructions = {
+      en: "Respond in English with occasional Sanskrit mantras and temple terminology",
+      hi: "हिंदी में उत्तर दें और संस्कृत मंत्रों का उपयोग करें। मंदिर की शब्दावली का सही उपयोग करें",
+      te: "తెలుగులో సమాధానం ఇవ్వండి మరియు సంస్కృత మంత్రాలను ఉపయోగించండి। దేవాలయ పదజాలాన్ని సరిగ్గా ఉపయోగించండి",
+      ta: "தமிழில் பதிலளிக்கவும் மற்றும் சமஸ்கிருத மந்திரங்களைப் பயன்படுத்தவும். கோவில் சொல்லாட்சியை சரியாகப் பயன்படுத்தவும்",
+      kn: "ಕನ್ನಡದಲ್ಲಿ ಉತ್ತರಿಸಿ ಮತ್ತು ಸಂಸ್ಕೃತ ಮಂತ್ರಗಳನ್ನು ಬಳಸಿ। ದೇವಾಲಯದ ಪದಸಂಪತ್ತನ್ನು ಸರಿಯಾಗಿ ಬಳಸಿ"
+    };
+
+    const languageInstruction = languageInstructions[language as keyof typeof languageInstructions] || languageInstructions.en;
+
+    const prompt = `You are Sribot, the multilingual AI assistant for Sri Balaji Temple. You are knowledgeable, helpful, and speak with devotion and respect. Always start responses with appropriate greetings like "🙏" or "Namaste".
+
+Language Instructions: ${languageInstruction}
 
 Use this temple knowledge to answer questions:
 ${templeKnowledge}
@@ -141,6 +154,8 @@ Instructions:
 - Keep responses helpful but concise
 - If you don't know something specific, admit it and suggest contacting the temple directly
 - Always maintain the sacred and devotional tone appropriate for a temple assistant
+- If responding in Hindi, Telugu, Tamil, or Kannada, use appropriate script and terminology
+- Include relevant Sanskrit mantras when appropriate for the language
 
 Respond as Sribot:`;
 

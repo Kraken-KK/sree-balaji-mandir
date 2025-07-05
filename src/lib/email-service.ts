@@ -15,6 +15,8 @@ interface EmailData {
   message?: string;
   subject?: string;
   content?: string;
+  subscriberEmail?: string;
+  subscriptionDate?: string;
 }
 
 export const sendNotificationEmail = async (
