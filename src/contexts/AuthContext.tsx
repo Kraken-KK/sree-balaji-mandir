@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }, 0);
             
             // Show subscriber dialog for new users
-            if (event === 'SIGNED_UP' || event === 'SIGNED_IN') {
+            if (event === 'SIGNED_IN') {
               const hasSeenDialog = localStorage.getItem('newsletter_dialog_shown');
               if (!hasSeenDialog) {
                 setTimeout(() => {
