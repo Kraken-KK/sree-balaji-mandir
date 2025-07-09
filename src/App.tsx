@@ -13,6 +13,8 @@ import Settings from '@/pages/Settings';
 import History from '@/pages/History';
 import AdminDashboard from '@/pages/AdminDashboard';
 import PaymentSuccess from '@/pages/PaymentSuccess';
+import Subscriptions from '@/pages/Subscriptions';
+import SubscriptionSuccess from '@/pages/SubscriptionSuccess';
 import Sribot from '@/components/Sribot';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -44,6 +46,8 @@ function App() {
                   <Route path="/history" element={<History />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/payment-success" element={<PaymentSuccess />} />
+                  <Route path="/subscriptions" element={<Subscriptions />} />
+                  <Route path="/subscription-success" element={<SubscriptionSuccess />} />
                 </Routes>
                 <Toaster />
                 <Sribot />

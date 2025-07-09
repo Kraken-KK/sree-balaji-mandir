@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { requestLocationPermission, LocationData } from '@/lib/location-service';
-import { MapPin, CreditCard, Smartphone, Globe } from 'lucide-react';
+import { MapPin, CreditCard, Smartphone, Globe, AlertCircle } from 'lucide-react';
 
 interface LocationPaymentHandlerProps {
   amount: number;
@@ -76,24 +76,36 @@ const LocationPaymentHandler: React.FC<LocationPaymentHandlerProps> = ({
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('PhonePe error, trying fallback:', error);
+        throw error;
+      }
 
-      // Open PhonePe payment page
+      // Check if response indicates fallback was used
+      if (data.gateway === 'stripe_fallback') {
+        toast({
+          title: 'Payment Gateway Updated',
+          description: 'Redirecting to Stripe for secure payment processing.',
+        });
+      } else {
+        toast({
+          title: 'Redirecting to PhonePe',
+          description: 'Complete your payment using PhonePe (UPI, QR, Cards available)',
+        });
+      }
+
+      // Open payment page
       window.open(data.url, '_blank');
-      
-      toast({
-        title: 'Redirecting to PhonePe',
-        description: 'Complete your payment using PhonePe (UPI, QR, Cards available)',
-      });
 
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('PhonePe payment error:', error);
       toast({
-        title: 'Payment Error',
-        description: 'Failed to create PhonePe payment. Please try again.',
-        variant: 'destructive'
+        title: 'Payment Processing',
+        description: 'Redirecting to backup payment gateway...',
       });
+      // Try Stripe as fallback
+      await processStripePayment();
     }
   };
 
@@ -124,7 +136,7 @@ const LocationPaymentHandler: React.FC<LocationPaymentHandlerProps> = ({
       console.error('Stripe payment error:', error);
       toast({
         title: 'Payment Error',
-        description: 'Failed to create Stripe payment. Please try again.',
+        description: 'Failed to create payment. Please try again.',
         variant: 'destructive'
       });
     }
@@ -141,15 +153,15 @@ const LocationPaymentHandler: React.FC<LocationPaymentHandlerProps> = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-primary" />
-              Location Permission Required
+              Secure Payment Processing
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                We need your location to provide the best payment experience:
+              <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">
+                We provide the best payment experience based on your location:
               </p>
-              <ul className="mt-2 text-sm text-blue-700 dark:text-blue-300 space-y-1">
+              <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
                 <li className="flex items-center gap-2">
                   <Smartphone className="w-4 h-4" />
                   <span><strong>India:</strong> PhonePe (UPI, QR, Cards)</span>
@@ -160,10 +172,20 @@ const LocationPaymentHandler: React.FC<LocationPaymentHandlerProps> = ({
                 </li>
               </ul>
             </div>
+
+            <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg">
+              <div className="flex items-center gap-2 text-green-800 dark:text-green-200">
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-sm font-medium">Smart Fallback System</span>
+              </div>
+              <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                If one payment method fails, we'll automatically switch to backup options for seamless processing.
+              </p>
+            </div>
             
             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
               <p className="text-xs text-gray-600 dark:text-gray-400">
-                Your location data is only used for payment routing and is not stored.
+                Your location data is only used for payment routing and is not stored. All payments are processed securely with 256-bit SSL encryption.
               </p>
             </div>
 
@@ -174,7 +196,7 @@ const LocationPaymentHandler: React.FC<LocationPaymentHandlerProps> = ({
                 className="flex-1 temple-gradient text-white"
               >
                 <MapPin className="w-4 h-4 mr-2" />
-                {loading ? 'Processing...' : 'Allow Location & Pay'}
+                {loading ? 'Processing...' : 'Continue to Payment'}
               </Button>
               <Button
                 onClick={() => setShowLocationDialog(false)}
