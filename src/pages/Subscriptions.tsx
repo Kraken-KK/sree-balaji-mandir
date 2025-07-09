@@ -10,12 +10,21 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { CreditCard, Check, Star, Crown, Settings, LogIn } from 'lucide-react';
 
+interface Subscription {
+  id: string;
+  plan_type: string;
+  interval: string;
+  amount: number;
+  status: string;
+  created_at: string;
+}
+
 const Subscriptions = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState('');
-  const [currentSubscription, setCurrentSubscription] = useState<any>(null);
+  const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
 
   useEffect(() => {
     if (user) {
