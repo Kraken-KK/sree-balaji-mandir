@@ -61,12 +61,36 @@
 }
 
 @layer utilities {
+  /* Enhanced Temple Gradients */
   .temple-gradient {
-    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
   }
   
   .temple-gradient-light {
-    background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.2) 0%, hsl(var(--accent) / 0.2) 100%);
+  }
+
+  .temple-gradient-hover {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+    transition: all 0.3s ease;
+  }
+
+  .temple-gradient-hover:hover {
+    background: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(var(--primary)) 100%);
+    transform: scale(1.02);
+  }
+
+  /* Enhanced Shadow System */
+  .shadow-elegant {
+    box-shadow: 0 4px 20px -2px hsl(var(--primary) / 0.1), 0 2px 8px -2px hsl(var(--primary) / 0.05);
+  }
+
+  .shadow-glow {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.3), 0 0 40px hsl(var(--accent) / 0.1);
+  }
+
+  .hover-shadow-glow:hover {
+    box-shadow: 0 0 30px hsl(var(--primary) / 0.4), 0 0 60px hsl(var(--accent) / 0.2);
   }
 
   /* 3D Flip Card Animations */
@@ -131,10 +155,39 @@
 
   @keyframes pulse-glow {
     0%, 100% {
-      box-shadow: 0 0 5px rgba(249, 115, 22, 0.3);
+      box-shadow: 0 0 10px hsl(var(--primary) / 0.3), 0 0 20px hsl(var(--accent) / 0.1);
     }
     50% {
-      box-shadow: 0 0 20px rgba(249, 115, 22, 0.6);
+      box-shadow: 0 0 25px hsl(var(--primary) / 0.5), 0 0 40px hsl(var(--accent) / 0.3);
+    }
+  }
+
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%) scale(0.95);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0) scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
     }
   }
 
@@ -156,6 +209,20 @@
 
   .animate-pulse-glow {
     animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.1), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
   }
 
   /* Hover Effects */

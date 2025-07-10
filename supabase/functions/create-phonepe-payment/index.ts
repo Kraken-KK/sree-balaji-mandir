@@ -107,42 +107,84 @@ serve(async (req) => {
       customer_email: customerEmail || user.email
     });
 
-    // Make API call to PhonePe - Updated endpoint and headers
-    const phonePeResponse = await fetch("https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay", {
+    // Determine API endpoint (sandbox vs production)
+    const isProduction = Deno.env.get("PHONEPE_ENVIRONMENT") === "production";
+    const apiEndpoint = isProduction 
+      ? "https://api.phonepe.com/apis/hermes/pg/v1/pay"
+      : "https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay";
+
+    console.log("Using PhonePe endpoint:", apiEndpoint);
+
+    // Make API call to PhonePe with enhanced error handling
+    const phonePeResponse = await fetch(apiEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-VERIFY": checksumHex,
         "X-CLIENT-ID": clientId,
-        "X-CLIENT-VERSION": clientVersion
+        "X-CLIENT-VERSION": clientVersion,
+        "accept": "application/json"
       },
       body: JSON.stringify({
         request: base64Payload
       })
     });
 
-    const phonePeData = await phonePeResponse.json();
-    console.log("PhonePe response:", phonePeData);
+    if (!phonePeResponse.ok) {
+      console.error("PhonePe API HTTP error:", phonePeResponse.status, phonePeResponse.statusText);
+      throw new Error(`PhonePe API returned ${phonePeResponse.status}: ${phonePeResponse.statusText}`);
+    }
 
-    if (phonePeData.success && phonePeData.data?.instrumentResponse?.redirectInfo?.url) {
+    const phonePeData = await phonePeResponse.json();
+    console.log("PhonePe response:", JSON.stringify(phonePeData, null, 2));
+
+    // Enhanced response validation
+    if (phonePeData.success === true && phonePeData.data?.instrumentResponse?.redirectInfo?.url) {
+      // Update payment status to processing
+      await supabaseService.from('payments').update({
+        status: 'processing',
+        updated_at: new Date().toISOString()
+      }).eq('stripe_session_id', transactionId);
+
       return new Response(JSON.stringify({ 
         url: phonePeData.data.instrumentResponse.redirectInfo.url,
         transactionId: transactionId,
-        gateway: 'phonepe'
+        gateway: 'phonepe',
+        status: 'processing'
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
     } else {
-      console.log("PhonePe failed, falling back to Stripe:", phonePeData);
+      console.log("PhonePe failed - Response:", phonePeData);
+      console.log("Error details:", phonePeData.message || phonePeData.error || "Unknown error");
+      
+      // Update payment status to failed
+      await supabaseService.from('payments').update({
+        status: 'failed',
+        updated_at: new Date().toISOString()
+      }).eq('stripe_session_id', transactionId);
+      
       // Fallback to Stripe if PhonePe fails
+      console.log("Falling back to Stripe payment gateway");
       return await createStripePayment(req, user, amount, currency, description, customerEmail, customerName, type);
     }
 
   } catch (error) {
     console.error("PhonePe payment creation error:", error);
-    // Fallback to Stripe on any error
+    
+    // Enhanced error logging
+    const errorDetails = {
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+      endpoint: "create-phonepe-payment"
+    };
+    console.error("Detailed error:", JSON.stringify(errorDetails, null, 2));
+    
+    // Fallback to Stripe on any error with comprehensive error handling
     try {
+      console.log("Attempting Stripe fallback due to PhonePe error");
       const { data: { user } } = await createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -150,14 +192,30 @@ serve(async (req) => {
       ).auth.getUser();
       
       if (user) {
-        const { amount, currency, description, customerEmail, customerName, type } = await req.json();
+        const requestBody = await req.clone().json();
+        const { amount, currency, description, customerEmail, customerName, type } = requestBody;
+        console.log("Proceeding with Stripe fallback for user:", user.id);
         return await createStripePayment(req, user, amount, currency, description, customerEmail, customerName, type);
+      } else {
+        throw new Error("User authentication failed during fallback");
       }
     } catch (fallbackError) {
       console.error("Stripe fallback also failed:", fallbackError);
+      return new Response(JSON.stringify({ 
+        error: "Payment processing failed",
+        details: "Both PhonePe and Stripe payment gateways are currently unavailable. Please try again later.",
+        fallbackError: fallbackError.message 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 503,
+      });
     }
     
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: "Payment gateway error",
+      message: error.message,
+      suggestion: "Please try again or contact support if the issue persists"
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
