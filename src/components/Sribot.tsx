@@ -9,6 +9,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 
+// Extend Window interface for Speech Recognition
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+    SpeechRecognition: any;
+  }
+}
+
 interface Message {
   id: string;
   text: string;
@@ -121,7 +129,7 @@ const Sribot = () => {
       setIsListening(true);
     };
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       setInputText(transcript);
       setIsListening(false);
@@ -152,7 +160,7 @@ const Sribot = () => {
       <Button
         onClick={() => setIsOpen(true)}
         size={isMobile ? "default" : "lg"}
-        className={`fixed ${isMobile ? 'bottom-4 right-4' : 'bottom-6 right-6'} z-50 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-full ${isMobile ? 'h-12 w-12' : 'h-14 w-14'} animate-bounce`}
+        className={`fixed ${isMobile ? 'bottom-4 right-4' : 'bottom-6 right-6'} z-50 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-full ${isMobile ? 'h-12 w-12' : 'h-14 w-14'} animate-bounce-gentle`}
         aria-label="Open Sribot Chat"
       >
         <MessageCircle className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'}`} />
@@ -161,10 +169,10 @@ const Sribot = () => {
   }
 
   return (
-    <Card className={`fixed ${isMobile ? 'inset-4 top-16' : 'bottom-6 right-6 w-96 h-[500px]'} z-50 shadow-2xl border-2 border-primary/20 bg-card dark:bg-gray-800 animate-scale-in flex flex-col`}>
+    <Card className={`fixed ${isMobile ? 'inset-4 top-16' : 'bottom-6 right-6 w-96 h-[500px]'} z-50 shadow-2xl border-2 border-primary/20 bg-card dark:bg-gray-800 animate-scale-in flex flex-col backdrop-blur-sm`}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-t-lg">
         <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center animate-pulse-glow">
             <span className="text-primary font-bold text-sm">🤖</span>
           </div>
           Sribot
@@ -173,7 +181,7 @@ const Sribot = () => {
           variant="ghost"
           size="sm"
           onClick={() => setIsOpen(false)}
-          className="text-white hover:bg-white/20 h-8 w-8 p-0"
+          className="text-white hover:bg-white/20 h-8 w-8 p-0 transition-all duration-200"
           aria-label="Close chat"
         >
           <X className="h-4 w-4" />
@@ -186,19 +194,20 @@ const Sribot = () => {
           className="flex-1 p-4 max-h-none overflow-y-auto"
         >
           <div className="space-y-4">
-            {messages.map((message) => (
+            {messages.map((message, index) => (
               <div
                 key={message.id}
                 className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+                style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm transition-all duration-200 ${
+                  className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm transition-all duration-300 hover:scale-105 ${
                     message.sender === 'user'
-                      ? 'bg-primary text-white ml-4'
-                      : 'bg-muted dark:bg-gray-700 text-foreground dark:text-white mr-4'
+                      ? 'bg-primary text-white ml-4 shadow-md'
+                      : 'bg-muted dark:bg-gray-700 text-foreground dark:text-white mr-4 shadow-sm'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{message.text}</p>
+                  <p className="whitespace-pre-wrap leading-relaxed">{message.text}</p>
                   <p className={`text-xs mt-1 opacity-70 ${
                     message.sender === 'user' ? 'text-right' : 'text-left'
                   }`}>
@@ -208,8 +217,8 @@ const Sribot = () => {
               </div>
             ))}
             {isLoading && (
-              <div className="flex justify-start animate-fade-in">
-                <div className="bg-muted dark:bg-gray-700 rounded-2xl px-4 py-3 mr-4 flex items-center gap-2">
+              <div className="flex justify-start animate-slide-up">
+                <div className="bg-muted dark:bg-gray-700 rounded-2xl px-4 py-3 mr-4 flex items-center gap-2 shadow-sm">
                   <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   <span className="text-sm text-muted-foreground dark:text-gray-300">Sribot is typing...</span>
                 </div>
@@ -218,7 +227,7 @@ const Sribot = () => {
           </div>
         </ScrollArea>
 
-        <div className="border-t border-border dark:border-gray-600 p-4">
+        <div className="border-t border-border dark:border-gray-600 p-4 bg-background/80 dark:bg-gray-800/80 backdrop-blur-sm">
           <form onSubmit={handleSubmit} className="flex gap-2">
             <div className="flex-1 relative">
               <Input
@@ -227,7 +236,7 @@ const Sribot = () => {
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder="Ask Sribot about temple services..."
                 disabled={isLoading}
-                className="pr-12 bg-background dark:bg-gray-700 border-border dark:border-gray-600 focus:border-primary transition-colors duration-200"
+                className={`pr-12 bg-background dark:bg-gray-700 border-border dark:border-gray-600 focus:border-primary transition-all duration-200 ${isMobile ? 'text-base' : ''}`}
                 maxLength={500}
               />
               <Button
@@ -236,7 +245,7 @@ const Sribot = () => {
                 size="sm"
                 onClick={handleVoiceInput}
                 disabled={isLoading}
-                className={`absolute right-1 top-1 h-8 w-8 p-0 hover:bg-muted dark:hover:bg-gray-600 transition-colors duration-200 ${
+                className={`absolute right-1 top-1 h-8 w-8 p-0 hover:bg-muted dark:hover:bg-gray-600 transition-all duration-200 ${
                   isListening ? 'text-red-500 animate-pulse' : 'text-muted-foreground'
                 }`}
                 aria-label={isListening ? "Listening..." : "Voice input"}
@@ -247,7 +256,7 @@ const Sribot = () => {
             <Button
               type="submit"
               disabled={!inputText.trim() || isLoading}
-              className="bg-primary hover:bg-primary/90 text-white transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="bg-primary hover:bg-primary/90 text-white transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 min-w-[44px]"
               aria-label="Send message"
             >
               {isLoading ? (
@@ -259,7 +268,7 @@ const Sribot = () => {
           </form>
           <div className="flex justify-between items-center mt-2 text-xs text-muted-foreground dark:text-gray-400">
             <span>Powered by AI</span>
-            <span>{inputText.length}/500</span>
+            <span className={inputText.length > 450 ? 'text-orange-500' : ''}>{inputText.length}/500</span>
           </div>
         </div>
       </CardContent>
