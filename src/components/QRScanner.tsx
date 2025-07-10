@@ -4,11 +4,9 @@ import { QrReader } from 'react-qr-reader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import ManualTicketValidator from './ManualTicketValidator';
-import { CheckCircle, XCircle, Camera, CameraOff, Scan, RotateCcw, Hash } from 'lucide-react';
+import { CheckCircle, XCircle, Camera, CameraOff, Scan, RotateCcw } from 'lucide-react';
 
 const QRScanner: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
@@ -198,189 +196,170 @@ const QRScanner: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="qr-scanner" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="qr-scanner" className="flex items-center gap-2">
-            <Scan className="w-4 h-4" />
-            QR Scanner
-          </TabsTrigger>
-          <TabsTrigger value="manual-validator" className="flex items-center gap-2">
-            <Hash className="w-4 h-4" />
-            Manual Validator
-          </TabsTrigger>
-        </TabsList>
+      <Card className="bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-all duration-300">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3 text-white">
+            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+              <Scan className="w-5 h-5 text-white" />
+            </div>
+            QR Code Scanner
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Button
+              onClick={() => setIsScanning(!isScanning)}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                isScanning 
+                  ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600' 
+                  : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
+              }`}
+              size="lg"
+            >
+              {isScanning ? (
+                <>
+                  <CameraOff className="w-5 h-5" />
+                  Stop Scanning
+                </>
+              ) : (
+                <>
+                  <Camera className="w-5 h-5" />
+                  Start Scanning
+                </>
+              )}
+            </Button>
+            
+            {(scannedTicket || lastScannedCode) && (
+              <Button
+                onClick={resetScanner}
+                variant="outline"
+                className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold bg-white/10 border-white/20 text-white hover:bg-white/20"
+                size="lg"
+              >
+                <RotateCcw className="w-5 h-5" />
+                Reset Scanner
+              </Button>
+            )}
+          </div>
 
-        <TabsContent value="qr-scanner">
-          <Card className="bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-all duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-white">
-                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-                  <Scan className="w-5 h-5 text-white" />
+          {isScanning && (
+            <div className="w-full max-w-md mx-auto">
+              <div className="relative rounded-2xl overflow-hidden bg-black/20 backdrop-blur-sm border border-white/10">
+                <QrReader
+                  onResult={(result, error) => {
+                    if (result) {
+                      handleScan(result.getText());
+                    }
+                    if (error) {
+                      console.log('QR Reader error:', error);
+                    }
+                  }}
+                  constraints={{
+                    facingMode: cameraFacingMode,
+                  }}
+                  className="w-full"
+                />
+                <div className="absolute inset-4 border-2 border-white/30 rounded-xl pointer-events-none">
+                  <div className="absolute top-0 left-0 w-6 h-6 border-l-4 border-t-4 border-white rounded-tl-lg"></div>
+                  <div className="absolute top-0 right-0 w-6 h-6 border-r-4 border-t-4 border-white rounded-tr-lg"></div>
+                  <div className="absolute bottom-0 left-0 w-6 h-6 border-l-4 border-b-4 border-white rounded-bl-lg"></div>
+                  <div className="absolute bottom-0 right-0 w-6 h-6 border-r-4 border-b-4 border-white rounded-br-lg"></div>
                 </div>
-                QR Code Scanner
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
+              </div>
+              <p className="text-center text-sm text-gray-300 mt-4">
+                Point camera at QR code to scan
+              </p>
+            </div>
+          )}
+
+          {isScanning && (
+            <div className="flex justify-center">
+              <Button
+                onClick={() => setCameraFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))}
+                variant="outline"
+                className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl"
+                size="lg"
+              >
+                <Camera className="w-5 h-5" />
+                Switch Camera
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {scannedTicket && (
+        <Card className={`bg-white/5 backdrop-blur-md border transition-all duration-300 ${
+          scannedTicket.status === 'used' 
+            ? 'border-red-500/50 bg-red-500/10' 
+            : 'border-green-500/50 bg-green-500/10'
+        }`}>
+          <CardHeader>
+            <CardTitle className={`flex items-center gap-3 ${
+              scannedTicket.status === 'used' 
+                ? 'text-red-400' 
+                : 'text-green-400'
+            }`}>
+              {scannedTicket.status === 'used' ? (
+                <XCircle className="w-6 h-6" />
+              ) : (
+                <CheckCircle className="w-6 h-6" />
+              )}
+              {scannedTicket.status === 'used' ? 'Ticket Used ✓' : 'Valid Ticket Scanned'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-300">Ticket Number</label>
+                  <p className="font-mono text-xl font-bold text-white">{scannedTicket.ticket_number}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-300">Customer</label>
+                  <p className="text-white">{scannedTicket.customer_name}</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-300">Service</label>
+                  <p className="text-white">{scannedTicket.services?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-300">Status</label>
+                  <Badge 
+                    variant={scannedTicket.status === 'used' ? 'destructive' : 'default'}
+                    className="font-semibold"
+                  >
+                    {scannedTicket.status === 'used' ? 'USED' : scannedTicket.status.toUpperCase()}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {scannedTicket.status === 'active' && (
+              <div className="flex justify-center pt-4">
                 <Button
-                  onClick={() => setIsScanning(!isScanning)}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                    isScanning 
-                      ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600' 
-                      : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
-                  }`}
+                  onClick={markTicketAsUsed}
+                  disabled={loading}
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-8 py-3 rounded-xl font-semibold"
                   size="lg"
                 >
-                  {isScanning ? (
-                    <>
-                      <CameraOff className="w-5 h-5" />
-                      Stop Scanning
-                    </>
-                  ) : (
-                    <>
-                      <Camera className="w-5 h-5" />
-                      Start Scanning
-                    </>
-                  )}
+                  {loading ? 'Processing...' : 'Mark as Used'}
                 </Button>
-                
-                {(scannedTicket || lastScannedCode) && (
-                  <Button
-                    onClick={resetScanner}
-                    variant="outline"
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold bg-white/10 border-white/20 text-white hover:bg-white/20"
-                    size="lg"
-                  >
-                    <RotateCcw className="w-5 h-5" />
-                    Reset Scanner
-                  </Button>
-                )}
               </div>
+            )}
 
-              {isScanning && (
-                <div className="w-full max-w-md mx-auto">
-                  <div className="relative rounded-2xl overflow-hidden bg-black/20 backdrop-blur-sm border border-white/10">
-                    <QrReader
-                      onResult={(result, error) => {
-                        if (result) {
-                          handleScan(result.getText());
-                        }
-                        if (error) {
-                          console.log('QR Reader error:', error);
-                        }
-                      }}
-                      constraints={{
-                        facingMode: cameraFacingMode,
-                      }}
-                      className="w-full"
-                    />
-                    <div className="absolute inset-4 border-2 border-white/30 rounded-xl pointer-events-none">
-                      <div className="absolute top-0 left-0 w-6 h-6 border-l-4 border-t-4 border-white rounded-tl-lg"></div>
-                      <div className="absolute top-0 right-0 w-6 h-6 border-r-4 border-t-4 border-white rounded-tr-lg"></div>
-                      <div className="absolute bottom-0 left-0 w-6 h-6 border-l-4 border-b-4 border-white rounded-bl-lg"></div>
-                      <div className="absolute bottom-0 right-0 w-6 h-6 border-r-4 border-b-4 border-white rounded-br-lg"></div>
-                    </div>
-                  </div>
-                  <p className="text-center text-sm text-gray-300 mt-4">
-                    Point camera at QR code to scan
-                  </p>
-                </div>
-              )}
-
-              {isScanning && (
-                <div className="flex justify-center">
-                  <Button
-                    onClick={() => setCameraFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))}
-                    variant="outline"
-                    className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl"
-                    size="lg"
-                  >
-                    <Camera className="w-5 h-5" />
-                    Switch Camera
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {scannedTicket && (
-            <Card className={`bg-white/5 backdrop-blur-md border transition-all duration-300 ${
-              scannedTicket.status === 'used' 
-                ? 'border-red-500/50 bg-red-500/10' 
-                : 'border-green-500/50 bg-green-500/10'
-            }`}>
-              <CardHeader>
-                <CardTitle className={`flex items-center gap-3 ${
-                  scannedTicket.status === 'used' 
-                    ? 'text-red-400' 
-                    : 'text-green-400'
-                }`}>
-                  {scannedTicket.status === 'used' ? (
-                    <XCircle className="w-6 h-6" />
-                  ) : (
-                    <CheckCircle className="w-6 h-6" />
-                  )}
-                  {scannedTicket.status === 'used' ? 'Ticket Used ✓' : 'Valid Ticket Scanned'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium text-gray-300">Ticket Number</label>
-                      <p className="font-mono text-xl font-bold text-white">{scannedTicket.ticket_number}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-300">Customer</label>
-                      <p className="text-white">{scannedTicket.customer_name}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium text-gray-300">Service</label>
-                      <p className="text-white">{scannedTicket.services?.name || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-300">Status</label>
-                      <Badge 
-                        variant={scannedTicket.status === 'used' ? 'destructive' : 'default'}
-                        className="font-semibold"
-                      >
-                        {scannedTicket.status === 'used' ? 'USED' : scannedTicket.status.toUpperCase()}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {scannedTicket.status === 'active' && (
-                  <div className="flex justify-center pt-4">
-                    <Button
-                      onClick={markTicketAsUsed}
-                      disabled={loading}
-                      className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-8 py-3 rounded-xl font-semibold"
-                      size="lg"
-                    >
-                      {loading ? 'Processing...' : 'Mark as Used'}
-                    </Button>
-                  </div>
-                )}
-
-                {scannedTicket.status === 'used' && (
-                  <div className="text-center pt-4">
-                    <p className="text-sm text-gray-300">
-                      This ticket has been successfully processed and cannot be used again.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="manual-validator">
-          <ManualTicketValidator />
-        </TabsContent>
-      </Tabs>
+            {scannedTicket.status === 'used' && (
+              <div className="text-center pt-4">
+                <p className="text-sm text-gray-300">
+                  This ticket has been successfully processed and cannot be used again.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,10 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import TicketGenerator from './TicketGenerator';
-import FlippableTicketCard from './FlippableTicketCard';
-import ServiceCancellation from './ServiceCancellation';
 import QRCode from 'qrcode';
-import { Receipt, Ticket, Heart, Download, Calendar, DollarSign, RefreshCw } from 'lucide-react';
+import { Receipt, Ticket, Heart, Download, Calendar, DollarSign } from 'lucide-react';
 
 const UserHistorySection: React.FC = () => {
   const { user } = useAuth();
@@ -23,34 +22,8 @@ const UserHistorySection: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchUserHistory();
-      setupRealtimeSubscription();
     }
   }, [user]);
-
-  const setupRealtimeSubscription = () => {
-    // Set up real-time subscription for ticket updates
-    const channel = supabase
-      .channel('ticket-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tickets',
-          filter: `user_id=eq.${user?.id}`
-        },
-        (payload) => {
-          console.log('Real-time ticket update:', payload);
-          // Refresh the tickets when any change occurs
-          fetchUserHistory();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
 
   const fetchUserHistory = async () => {
     try {
@@ -427,78 +400,23 @@ const UserHistorySection: React.FC = () => {
       <div className="text-center animate-fade-in">
         <h3 className="text-2xl font-bold mb-2">Your Activity History</h3>
         <p className="text-muted-foreground">View your donations, tickets, and invoices</p>
-        <Button
-          onClick={fetchUserHistory}
-          variant="outline"
-          size="sm"
-          className="mt-4"
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
-        </Button>
       </div>
 
-      <Tabs defaultValue="tickets" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="tickets" className="flex items-center gap-2">
-            <Ticket className="w-4 h-4" />
-            Tickets ({tickets.length})
-          </TabsTrigger>
+      <Tabs defaultValue="donations" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="donations" className="flex items-center gap-2">
             <Heart className="w-4 h-4" />
             Donations ({donations.length})
+          </TabsTrigger>
+          <TabsTrigger value="tickets" className="flex items-center gap-2">
+            <Ticket className="w-4 h-4" />
+            Tickets ({tickets.length})
           </TabsTrigger>
           <TabsTrigger value="invoices" className="flex items-center gap-2">
             <Receipt className="w-4 h-4" />
             All Payments ({payments.length})
           </TabsTrigger>
-          <TabsTrigger value="cancel" className="flex items-center gap-2">
-            <RefreshCw className="w-4 h-4" />
-            Cancel
-          </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="tickets">
-          <div className="grid gap-6">
-            {tickets.length === 0 ? (
-              <Card className="animate-fade-in">
-                <CardContent className="text-center py-8">
-                  <Ticket className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No tickets yet</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {tickets.map((ticket: any) => {
-                  const relatedPayment = payments.find(p => p.type === 'service');
-                  return (
-                    <div key={ticket.id} className="space-y-4 animate-fade-in">
-                      <FlippableTicketCard
-                        ticket={{
-                          ...ticket,
-                          service_name: ticket.services?.name || 'Service'
-                        }}
-                      />
-                      {relatedPayment && (
-                        <div className="text-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => downloadInvoice(relatedPayment, ticket)}
-                            className="hover-scale"
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            Download Invoice
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </TabsContent>
 
         <TabsContent value="donations">
           <div className="grid gap-4">
@@ -540,6 +458,45 @@ const UserHistorySection: React.FC = () => {
                   </CardContent>
                 </Card>
               ))
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="tickets">
+          <div className="grid gap-6">
+            {tickets.length === 0 ? (
+              <Card className="animate-fade-in">
+                <CardContent className="text-center py-8">
+                  <Ticket className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">No tickets yet</p>
+                </CardContent>
+              </Card>
+            ) : (
+              tickets.map((ticket: any) => {
+                const relatedPayment = payments.find(p => p.type === 'service');
+                return (
+                  <div key={ticket.id} className="space-y-4 animate-fade-in">
+                    <TicketGenerator
+                      ticket={{
+                        ...ticket,
+                        service_name: ticket.services?.name || 'Service'
+                      }}
+                    />
+                    {relatedPayment && (
+                      <div className="text-center">
+                        <Button
+                          variant="outline"
+                          onClick={() => downloadInvoice(relatedPayment, ticket)}
+                          className="hover-scale"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Download Ticket Invoice
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </TabsContent>
@@ -596,10 +553,6 @@ const UserHistorySection: React.FC = () => {
               })
             )}
           </div>
-        </TabsContent>
-
-        <TabsContent value="cancel">
-          <ServiceCancellation onTicketUpdated={fetchUserHistory} />
         </TabsContent>
       </Tabs>
     </div>
