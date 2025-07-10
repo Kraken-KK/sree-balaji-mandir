@@ -10,7 +10,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-const ServiceCancellation = () => {
+interface ServiceCancellationProps {
+  onTicketUpdated?: () => void;
+}
+
+const ServiceCancellation: React.FC<ServiceCancellationProps> = ({ onTicketUpdated }) => {
   const [ticketNumber, setTicketNumber] = useState('');
   const [reason, setReason] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -73,6 +77,11 @@ const ServiceCancellation = () => {
 
       setTicketNumber('');
       setReason('');
+      
+      // Notify parent component that ticket was updated
+      if (onTicketUpdated) {
+        onTicketUpdated();
+      }
     } catch (error) {
       console.error('Cancellation error:', error);
       toast({
