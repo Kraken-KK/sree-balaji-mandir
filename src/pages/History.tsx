@@ -104,53 +104,26 @@ const History = () => {
 
         {/* Timeline Section */}
         <section className="mb-20">
-  <h2 className="text-3xl font-bold text-center mb-12 animate-slide-up">Historical Timeline</h2>
-  <Swiper
-    modules={[Pagination]}
-    spaceBetween={24}
-    slidesPerView={1}
-    pagination={{ clickable: true }}
-    className="max-w-md mx-auto"
-    style={{ paddingBottom: '2.5rem' }}
-  >
-    {timelineEvents.map((event, index) => (
-      <SwiperSlide key={index}>
-        <Card className="hover:shadow-xl transition-all duration-500 hover:-translate-y-2 group">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors">
-                <event.icon className="w-5 h-5 text-primary" />
-              </div>
-              <Badge variant="outline" className="text-primary border-primary">
-                {event.year}
-              </Badge>
-            </div>
-            <h3 className="text-xl font-semibold mb-3 group-hover:text-primary transition-colors">
-              {event.title}
-            </h3>
-            <p className="text-muted-foreground leading-relaxed mb-4">
-              {event.description}
-            </p>
-            <div className="relative overflow-hidden rounded-lg shadow-lg group mb-2">
-              <img
-                src={event.image}
-                alt={event.title}
-                className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            </div>
-          </CardContent>
-        </Card>
-      </SwiperSlide>
-    ))}
-  </Swiper>
-</section>
-                
-                {/* Timeline dot */}
-                <div className="absolute left-1/2 transform -translate-x-1/2 w-4 h-4 bg-primary rounded-full border-4 border-background shadow-lg animate-pulse" />
-                
-                <div className={`w-1/2 ${index % 2 === 0 ? 'pl-8' : 'pr-8'}`}>
-                  <div className="relative overflow-hidden rounded-lg shadow-lg group">
+          <h2 className="text-3xl font-bold text-center mb-12 animate-slide-up">Historical Timeline</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {timelineEvents.map((event, index) => (
+              <Card key={index} className="hover:shadow-xl transition-all duration-500 hover:-translate-y-2 group">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors">
+                      <event.icon className="w-5 h-5 text-primary" />
+                    </div>
+                    <Badge variant="outline" className="text-primary border-primary">
+                      {event.year}
+                    </Badge>
+                  </div>
+                  <h3 className="text-xl font-semibold mb-3 group-hover:text-primary transition-colors">
+                    {event.title}
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed mb-4">
+                    {event.description}
+                  </p>
+                  <div className="relative overflow-hidden rounded-lg shadow-lg group mb-2">
                     <img
                       src={event.image}
                       alt={event.title}
@@ -158,8 +131,8 @@ const History = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </section>
