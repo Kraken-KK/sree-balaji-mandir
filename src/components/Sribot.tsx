@@ -21,7 +21,7 @@ const Sribot = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Namaste! I am Sribot, your divine assistant. How can I help you with temple services today? 🙏',
+      text: 'Om Namaha Shivaya! 🙏 I am Sribot, your divine spiritual assistant. I am here to help you with temple services, rituals, events, and spiritual guidance. How may I serve you today?',
       sender: 'bot',
       timestamp: new Date()
     }
@@ -79,15 +79,15 @@ const Sribot = () => {
       console.error('Chat error:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: 'I apologize, but I\'m having trouble connecting right now. Please try again in a moment. 🙏',
+        text: 'My apologies, divine soul. I am experiencing some technical difficulties in connecting to the spiritual realm. Please try again in a moment. May Lord Balaji bless our connection. 🙏',
         sender: 'bot',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
       
       toast({
-        title: "Connection Error",
-        description: "Unable to connect to Sribot. Please try again.",
+        title: "Divine Connection Issue",
+        description: "Unable to connect to Sribot's spiritual guidance. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -152,7 +152,7 @@ const Sribot = () => {
       <Button
         onClick={() => setIsOpen(true)}
         size={isMobile ? "default" : "lg"}
-        className={`fixed ${isMobile ? 'bottom-4 right-4' : 'bottom-6 right-6'} z-50 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-full ${isMobile ? 'h-12 w-12' : 'h-14 w-14'} animate-bounce`}
+        className={`fixed ${isMobile ? 'bottom-4 right-4' : 'bottom-6 right-6'} z-50 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 hover:from-orange-600 hover:via-amber-600 hover:to-yellow-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-full ${isMobile ? 'h-12 w-12' : 'h-14 w-14'} hover:scale-110`}
         aria-label="Open Sribot Chat"
       >
         <MessageCircle className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'}`} />
@@ -161,19 +161,26 @@ const Sribot = () => {
   }
 
   return (
-    <Card className={`fixed ${isMobile ? 'inset-4 top-16' : 'bottom-6 right-6 w-96 h-[500px]'} z-50 shadow-2xl border-2 border-primary/20 bg-card dark:bg-gray-800 animate-scale-in flex flex-col`}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-t-lg">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-            <span className="text-primary font-bold text-sm">🤖</span>
+    <Card className={`fixed ${isMobile ? 'inset-4 top-16' : 'bottom-6 right-6 w-96 h-[500px]'} z-50 shadow-2xl border-2 border-orange-200/30 bg-card dark:bg-gray-800 animate-scale-in flex flex-col overflow-hidden`}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 text-white rounded-t-lg relative overflow-hidden">
+        {/* Divine decorative elements */}
+        <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 via-yellow-400/20 to-amber-400/20"></div>
+        <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -translate-y-12 translate-x-12"></div>
+        <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-8 -translate-x-8"></div>
+        
+        <CardTitle className="text-lg font-semibold flex items-center gap-2 relative z-10">
+          <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30">
+            <span className="text-white font-bold text-sm">🙏</span>
           </div>
-          Sribot
+          <span className="bg-gradient-to-r from-white to-yellow-100 bg-clip-text text-transparent font-bold">
+            Sribot
+          </span>
         </CardTitle>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsOpen(false)}
-          className="text-white hover:bg-white/20 h-8 w-8 p-0"
+          className="text-white hover:bg-white/20 h-8 w-8 p-0 relative z-10 backdrop-blur-sm"
           aria-label="Close chat"
         >
           <X className="h-4 w-4" />
@@ -194,8 +201,8 @@ const Sribot = () => {
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm transition-all duration-200 ${
                     message.sender === 'user'
-                      ? 'bg-primary text-white ml-4'
-                      : 'bg-muted dark:bg-gray-700 text-foreground dark:text-white mr-4'
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white ml-4 shadow-md'
+                      : 'bg-gradient-to-r from-orange-50 to-amber-50 dark:from-gray-700 dark:to-gray-600 text-foreground dark:text-white mr-4 border border-orange-200/30 dark:border-gray-600'
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{message.text}</p>
@@ -209,25 +216,25 @@ const Sribot = () => {
             ))}
             {isLoading && (
               <div className="flex justify-start animate-fade-in">
-                <div className="bg-muted dark:bg-gray-700 rounded-2xl px-4 py-3 mr-4 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-sm text-muted-foreground dark:text-gray-300">Sribot is typing...</span>
+                <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-gray-700 dark:to-gray-600 rounded-2xl px-4 py-3 mr-4 flex items-center gap-2 border border-orange-200/30 dark:border-gray-600">
+                  <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
+                  <span className="text-sm text-muted-foreground dark:text-gray-300">Sribot is seeking divine wisdom...</span>
                 </div>
               </div>
             )}
           </div>
         </ScrollArea>
 
-        <div className="border-t border-border dark:border-gray-600 p-4">
+        <div className="border-t border-orange-200/30 dark:border-gray-600 p-4 bg-gradient-to-r from-orange-50/50 to-amber-50/50 dark:from-gray-800 dark:to-gray-700">
           <form onSubmit={handleSubmit} className="flex gap-2">
             <div className="flex-1 relative">
               <Input
                 ref={inputRef}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Ask Sribot about temple services..."
+                placeholder="Ask Sribot about temple services, rituals, or spiritual guidance..."
                 disabled={isLoading}
-                className="pr-12 bg-background dark:bg-gray-700 border-border dark:border-gray-600 focus:border-primary transition-colors duration-200"
+                className="pr-12 bg-white dark:bg-gray-700 border-orange-200 dark:border-gray-600 focus:border-orange-400 focus:ring-orange-400/20 transition-colors duration-200 rounded-xl"
                 maxLength={500}
               />
               <Button
@@ -236,8 +243,8 @@ const Sribot = () => {
                 size="sm"
                 onClick={handleVoiceInput}
                 disabled={isLoading}
-                className={`absolute right-1 top-1 h-8 w-8 p-0 hover:bg-muted dark:hover:bg-gray-600 transition-colors duration-200 ${
-                  isListening ? 'text-red-500 animate-pulse' : 'text-muted-foreground'
+                className={`absolute right-1 top-1 h-8 w-8 p-0 hover:bg-orange-100 dark:hover:bg-gray-600 transition-colors duration-200 ${
+                  isListening ? 'text-orange-500 animate-pulse' : 'text-muted-foreground hover:text-orange-600'
                 }`}
                 aria-label={isListening ? "Listening..." : "Voice input"}
               >
@@ -247,7 +254,7 @@ const Sribot = () => {
             <Button
               type="submit"
               disabled={!inputText.trim() || isLoading}
-              className="bg-primary hover:bg-primary/90 text-white transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-md rounded-xl"
               aria-label="Send message"
             >
               {isLoading ? (
@@ -258,7 +265,10 @@ const Sribot = () => {
             </Button>
           </form>
           <div className="flex justify-between items-center mt-2 text-xs text-muted-foreground dark:text-gray-400">
-            <span>Powered by AI</span>
+            <span className="flex items-center gap-1">
+              <span className="text-orange-500">🙏</span>
+              Blessed by Divine AI
+            </span>
             <span>{inputText.length}/500</span>
           </div>
         </div>
