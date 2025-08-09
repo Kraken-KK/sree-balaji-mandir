@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -6,10 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import LocationPaymentHandler from '@/components/LocationPaymentHandler';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { CreditCard, LogIn } from 'lucide-react';
 
 const Donations = () => {
@@ -25,6 +26,7 @@ const Donations = () => {
     phone: '',
     purpose: 'general',
   });
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   const predefinedAmounts = ['100', '500', '1000', '2500', '5000', 'Other'];
 
@@ -36,38 +38,82 @@ const Donations = () => {
     { value: 'charity', label: 'Charity & Welfare' },
   ];
 
-  const handleDonationSuccess = () => {
-    toast({
-      title: 'Donation Successful',
-      description: 'Thank you for your generous donation!',
-    });
+  const handleDonation = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    setDonationData({
-      amount: '',
-      customAmount: '',
-      donorName: '',
-      email: '',
-      phone: '',
-      purpose: 'general',
-    });
-  };
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please sign in to make donations.',
+        variant: 'destructive'
+      });
+      navigate('/auth');
+      return;
+    }
+    
+    if (!donationData.donorName || !donationData.email || !donationData.phone) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive'
+      });
+      return;
+    }
 
-  const isFormValid = () => {
-    return donationData.donorName && 
-           donationData.email && 
-           donationData.phone && 
-           donationData.amount && 
-           (donationData.amount !== 'Other' || donationData.customAmount);
-  };
+    const finalAmount = donationData.amount === 'Other' ? donationData.customAmount : donationData.amount;
+    
+    if (!finalAmount || Number(finalAmount) <= 0) {
+      toast({
+        title: 'Invalid Amount',
+        description: 'Please enter a valid donation amount.',
+        variant: 'destructive'
+      });
+      return;
+    }
 
-  const getFinalAmount = () => {
-    return donationData.amount === 'Other' ? 
-           Number(donationData.customAmount) : 
-           Number(donationData.amount);
-  };
+    setPaymentLoading(true);
+    try {
+      const selectedPurpose = donationPurposes.find(p => p.value === donationData.purpose)?.label || 'General Temple Fund';
+      
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          amount: Number(finalAmount),
+          currency: 'inr',
+          description: selectedPurpose,
+          customerEmail: donationData.email,
+          customerName: donationData.donorName,
+          type: 'donation'
+        }
+      });
 
-  const getSelectedPurpose = () => {
-    return donationPurposes.find(p => p.value === donationData.purpose)?.label || 'General Temple Fund';
+      if (error) throw error;
+
+      // Open Stripe checkout in a new tab
+      window.open(data.url, '_blank');
+      
+      toast({
+        title: 'Redirecting to Payment',
+        description: 'Please complete your donation in the new window.',
+      });
+      
+      setDonationData({
+        amount: '',
+        customAmount: '',
+        donorName: '',
+        email: '',
+        phone: '',
+        purpose: 'general',
+      });
+    } catch (error) {
+      console.error('Donation error:', error);
+      toast({
+        title: 'Payment Error',
+        description: 'Failed to create payment session. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setPaymentLoading(false);
+    }
   };
 
   return (
@@ -107,7 +153,7 @@ const Donations = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
+              <form onSubmit={handleDonation} className="space-y-6">
                 {/* Amount Selection */}
                 <div>
                   <Label className="text-base font-medium mb-3 block">Select Amount (₹)</Label>
@@ -205,24 +251,15 @@ const Donations = () => {
                   </div>
                 </div>
 
-                <LocationPaymentHandler
-                  amount={getFinalAmount()}
-                  currency="INR"
-                  description={getSelectedPurpose()}
-                  customerEmail={donationData.email}
-                  customerName={donationData.donorName}
-                  type="donation"
-                  onSuccess={handleDonationSuccess}
+                <Button 
+                  type="submit" 
+                  className="w-full temple-gradient text-white text-lg py-6"
+                  disabled={!user || !donationData.amount || (donationData.amount === 'Other' && !donationData.customAmount) || paymentLoading}
                 >
-                  <Button 
-                    className="w-full temple-gradient text-white text-lg py-6"
-                    disabled={!user || !isFormValid()}
-                  >
-                    <CreditCard className="w-5 h-5 mr-2" />
-                    {`${t('donate_now')} - ₹${getFinalAmount() || '0'}`}
-                  </Button>
-                </LocationPaymentHandler>
-              </div>
+                  <CreditCard className="w-5 h-5 mr-2" />
+                  {paymentLoading ? 'Processing...' : `${t('donate_now')} - ₹${donationData.amount === 'Other' ? donationData.customAmount || '0' : donationData.amount || '0'}`}
+                </Button>
+              </form>
             </CardContent>
           </Card>
 
@@ -257,16 +294,16 @@ const Donations = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Payment Options</CardTitle>
+                <CardTitle>Payment Security</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>✓ PhonePe for Indian users (UPI, QR, Cards)</li>
-                  <li>✓ Stripe for International users</li>
+                  <li>✓ Secure payment gateway</li>
                   <li>✓ 256-bit SSL encryption</li>
                   <li>✓ Tax-exempt donation receipt</li>
                   <li>✓ 80G tax benefit available</li>
                   <li>✓ Transparent fund utilization</li>
+                  <li>✓ Authentication required for all donations</li>
                 </ul>
               </CardContent>
             </Card>

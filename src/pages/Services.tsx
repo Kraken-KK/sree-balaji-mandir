@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -7,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import LocationPaymentHandler from '@/components/LocationPaymentHandler';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,7 @@ const Services = () => {
   const navigate = useNavigate();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<any>(null);
   const [serviceDate, setServiceDate] = useState('');
 
@@ -70,10 +71,25 @@ const Services = () => {
       return;
     }
 
+    setPaymentLoading(selectedService.id);
     try {
       // Generate QR code data
       const qrData = `TICKET:${selectedService.id}:${user.id}:${Date.now()}`;
       
+      // Create payment first
+      const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-payment', {
+        body: {
+          amount: Number(selectedService.price),
+          currency: 'inr',
+          description: selectedService.name,
+          customerEmail: user.email,
+          customerName: user.user_metadata?.full_name || 'User',
+          type: 'service'
+        }
+      });
+
+      if (paymentError) throw paymentError;
+
       // Generate ticket number using the database function
       const { data: ticketNumberData, error: ticketNumberError } = await supabase
         .rpc('generate_ticket_number');
@@ -97,6 +113,7 @@ const Services = () => {
 
       if (ticketError) {
         console.error('Ticket creation error:', ticketError);
+        // Continue with payment even if ticket creation fails
       }
 
       // Send booking confirmation email
@@ -112,8 +129,11 @@ const Services = () => {
         }
       );
 
+      // Open Stripe checkout in a new tab
+      window.open(paymentData.url, '_blank');
+      
       toast({
-        title: 'Booking Confirmed',
+        title: 'Redirecting to Payment',
         description: 'Your ticket will be generated after successful payment. Check your email for confirmation.',
       });
 
@@ -127,6 +147,8 @@ const Services = () => {
         description: 'Failed to book service. Please try again.',
         variant: 'destructive'
       });
+    } finally {
+      setPaymentLoading(null);
     }
   };
 
@@ -235,23 +257,13 @@ const Services = () => {
                         {service.duration && <p><strong>Duration:</strong> {service.duration}</p>}
                         <p><strong>Description:</strong> {service.description}</p>
                       </div>
-                      
-                      <LocationPaymentHandler
-                        amount={Number(service.price)}
-                        currency="INR"
-                        description={service.name}
-                        customerEmail={user?.email}
-                        customerName={user?.user_metadata?.full_name}
-                        type="service"
-                        onSuccess={handleBookService}
+                      <Button 
+                        onClick={handleBookService}
+                        disabled={paymentLoading === service.id || !serviceDate}
+                        className="w-full temple-gradient text-white"
                       >
-                        <Button 
-                          disabled={!serviceDate}
-                          className="w-full temple-gradient text-white"
-                        >
-                          Confirm Booking & Pay
-                        </Button>
-                      </LocationPaymentHandler>
+                        {paymentLoading === service.id ? 'Processing...' : 'Confirm Booking & Pay'}
+                      </Button>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -277,11 +289,11 @@ const Services = () => {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p>✓ Select your preferred service date</p>
-              <p>✓ Location-based payment options</p>
-              <p>✓ PhonePe for India (UPI, QR, Cards)</p>
-              <p>✓ Stripe for International users</p>
+              <p>✓ Secure online payment</p>
               <p>✓ Instant booking confirmation</p>
               <p>✓ Email and SMS notifications</p>
+              <p>✓ Digital receipt generation</p>
+              <p>✓ Customer support available</p>
             </CardContent>
           </Card>
 
@@ -290,8 +302,7 @@ const Services = () => {
               <CardTitle>Payment Security</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <p>✓ PhonePe secure payment (India)</p>
-              <p>✓ Stripe secure payment (International)</p>
+              <p>✓ Stripe secure payment gateway</p>
               <p>✓ 256-bit SSL encryption</p>
               <p>✓ PCI DSS compliant</p>
               <p>✓ Multiple payment methods</p>

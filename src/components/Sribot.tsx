@@ -1,270 +1,500 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Mic, MicOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { MessageCircle, Send, Minimize2, X, Bot, User, Loader2, Settings, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { sendMessageToGemini } from '@/lib/gemini-fallback';
 import { supabase } from '@/integrations/supabase/client';
+import { useLocation } from 'react-router-dom';
+import ApiKeyDialog from '@/components/ApiKeyDialog';
 
 interface Message {
   id: string;
   text: string;
-  sender: 'user' | 'bot';
+  isBot: boolean;
   timestamp: Date;
 }
 
 const Sribot = () => {
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Namaste! I am Sribot, your divine assistant. How can I help you with temple services today? 🙏',
-      sender: 'bot',
+      text: '🙏 Namaste! I am Sribot, your divine assistant at Sri Balaji Temple. How may I help you today? You can ask me about temple services, upcoming events, donation information, or any spiritual guidance you need.',
+      isBot: true,
       timestamp: new Date()
     }
   ]);
-  const [inputText, setInputText] = useState('');
+  const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [realTimeData, setRealTimeData] = useState<any>({
+    events: [],
+    services: [],
+    lastUpdated: null
+  });
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const isMobile = useIsMobile();
+
+  // Hide Sribot on authentication and landing pages
+  const hiddenRoutes = ['/auth', '/landing'];
+  const shouldHide = hiddenRoutes.includes(location.pathname);
+
+  // Check if mobile device
+  const isMobile = window.innerWidth <= 768;
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-    }
+    scrollToBottom();
   }, [messages]);
 
   useEffect(() => {
-    if (isOpen && inputRef.current && !isMobile) {
-      inputRef.current.focus();
+    if (isOpen && !isMinimized) {
+      inputRef.current?.focus();
     }
-  }, [isOpen, isMobile]);
+  }, [isOpen, isMinimized]);
 
-  const sendMessage = async (text: string) => {
-    if (!text.trim()) return;
+  // Fetch real-time data every 30 seconds
+  useEffect(() => {
+    const fetchRealTimeData = async () => {
+      try {
+        const [eventsResponse, servicesResponse] = await Promise.all([
+          supabase.from('events').select('*').order('date', { ascending: true }).limit(10),
+          supabase.from('services').select('*').order('created_at', { ascending: false }).limit(10)
+        ]);
+
+        setRealTimeData({
+          events: eventsResponse.data || [],
+          services: servicesResponse.data || [],
+          lastUpdated: new Date()
+        });
+      } catch (error) {
+        console.error('Error fetching real-time data:', error);
+      }
+    };
+
+    fetchRealTimeData();
+    const interval = setInterval(fetchRealTimeData, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const enhanceMessageWithRealTimeData = (message: string) => {
+    const currentEvents = realTimeData.events
+      .filter((event: any) => new Date(event.date) >= new Date())
+      .slice(0, 5);
+    
+    const availableServices = realTimeData.services.slice(0, 8);
+
+    const contextData = `
+    Current Real-Time Temple Information (Last Updated: ${realTimeData.lastUpdated?.toLocaleTimeString()}):
+
+    UPCOMING EVENTS:
+    ${currentEvents.map((event: any) => 
+      `- ${event.name}: ${new Date(event.date).toLocaleDateString()} at ${event.time} (Location: ${event.location})`
+    ).join('\n')}
+
+    AVAILABLE SERVICES:
+    ${availableServices.map((service: any) => 
+      `- ${service.name}: ₹${service.price} ${service.description ? `(${service.description})` : ''}`
+    ).join('\n')}
+
+    User Question: ${message}
+    
+    Please provide specific, accurate information based on the real-time data above. If asked about events or services, use the exact information provided.
+    `;
+
+    return contextData;
+  };
+
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: text.trim(),
-      sender: 'user',
+      text: inputMessage.trim(),
+      isBot: false,
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInputText('');
+    setInputMessage('');
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('sribot-chat', {
-        body: { message: text.trim() }
-      });
+      // Detect language and enhance message
+      const detectedLanguage = detectLanguage(inputMessage.trim());
+      const enhancedMessage = enhanceMessageWithRealTimeData(getMultilingualPrompt(inputMessage.trim(), detectedLanguage));
+      
+      // Try Supabase function first
+      let botResponse: string;
+      try {
+        const { data, error } = await supabase.functions.invoke('sribot-chat', {
+          body: { 
+            message: enhancedMessage,
+            language: detectedLanguage 
+          }
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+        botResponse = data.response;
+      } catch (supabaseError) {
+        console.log('Supabase failed, using Gemini fallback:', supabaseError);
+        botResponse = await sendMessageToGemini(enhancedMessage);
+      }
 
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: data.response || 'I apologize, but I encountered an issue. Please try again.',
-        sender: 'bot',
+        text: botResponse,
+        isBot: true,
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
-      console.error('Chat error:', error);
+      console.error('Error sending message:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: 'I apologize, but I\'m having trouble connecting right now. Please try again in a moment. 🙏',
-        sender: 'bot',
+        text: '🙏 I apologize for the technical difficulty. Please try again or contact our temple directly for assistance.',
+        isBot: true,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
       
       toast({
-        title: "Connection Error",
+        title: "Connection Issue",
         description: "Unable to connect to Sribot. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    sendMessage(inputText);
-  };
-
-  const handleVoiceInput = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      toast({
-        title: "Voice Input Not Supported",
-        description: "Your browser doesn't support voice input.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
-    const recognition = new SpeechRecognition();
+  // Language detection function
+  const detectLanguage = (text: string): string => {
+    // Simple language detection based on script
+    if (/[\u0900-\u097F]/.test(text)) return 'hi'; // Devanagari
+    if (/[\u0C00-\u0C7F]/.test(text)) return 'te'; // Telugu
+    if (/[\u0B80-\u0BFF]/.test(text)) return 'ta'; // Tamil
+    if (/[\u0C80-\u0CFF]/.test(text)) return 'kn'; // Kannada
     
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
-
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setInputText(transcript);
-      setIsListening(false);
-    };
-
-    recognition.onerror = () => {
-      setIsListening(false);
-      toast({
-        title: "Voice Input Error",
-        description: "Unable to process voice input. Please try again.",
-        variant: "destructive"
-      });
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.start();
+    // Check for common words
+    const hindiWords = ['नमस्ते', 'धन्यवाद', 'कैसे', 'क्या', 'मंदिर', 'पूजा'];
+    const teluguWords = ['నమస్తే', 'ధన్యవాదములు', 'ఎలా', 'ఏమి', 'దేవాలయం', 'పూజ'];
+    const tamilWords = ['வணக்கம்', 'நன்றி', 'எப்படி', 'என்ன', 'கோவில்', 'பூஜை'];
+    const kannadaWords = ['ನಮಸ್ಕಾರ', 'ಧನ್ಯವಾದ', 'ಹೇಗೆ', 'ಏನು', 'ದೇವಾಲಯ', 'ಪೂಜೆ'];
+    
+    if (hindiWords.some(word => text.includes(word))) return 'hi';
+    if (teluguWords.some(word => text.includes(word))) return 'te';
+    if (tamilWords.some(word => text.includes(word))) return 'ta';
+    if (kannadaWords.some(word => text.includes(word))) return 'kn';
+    
+    return 'en'; // Default to English
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   };
 
-  if (!isOpen) {
-    return (
-      <Button
-        onClick={() => setIsOpen(true)}
-        size={isMobile ? "default" : "lg"}
-        className={`fixed ${isMobile ? 'bottom-4 right-4' : 'bottom-6 right-6'} z-50 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-full ${isMobile ? 'h-12 w-12' : 'h-14 w-14'} animate-bounce`}
-        aria-label="Open Sribot Chat"
-      >
-        <MessageCircle className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'}`} />
-      </Button>
-    );
+  if (shouldHide) {
+    return null;
   }
 
   return (
-    <Card className={`fixed ${isMobile ? 'inset-4 top-16' : 'bottom-6 right-6 w-96 h-[500px]'} z-50 shadow-2xl border-2 border-primary/20 bg-card dark:bg-gray-800 animate-scale-in flex flex-col`}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-t-lg">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-            <span className="text-primary font-bold text-sm">🤖</span>
-          </div>
-          Sribot
-        </CardTitle>
+    <>
+      {/* Chat Button */}
+      {!isOpen && (
         <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsOpen(false)}
-          className="text-white hover:bg-white/20 h-8 w-8 p-0"
-          aria-label="Close chat"
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-6 right-6 w-16 h-16 rounded-full temple-gradient text-white shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 z-50 animate-pulse"
+          style={{
+            background: 'linear-gradient(135deg, #ff6b35, #f7931e)',
+            boxShadow: '0 10px 30px rgba(255, 107, 53, 0.4)'
+          }}
         >
-          <X className="h-4 w-4" />
+          <MessageCircle className="w-8 h-8" />
         </Button>
-      </CardHeader>
+      )}
 
-      <CardContent className="flex flex-col flex-1 p-0">
-        <ScrollArea 
-          ref={scrollAreaRef}
-          className="flex-1 p-4 max-h-none overflow-y-auto"
-        >
-          <div className="space-y-4">
+      {/* Chat Window - Mobile Full Screen */}
+      {isOpen && isMobile && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+          {/* Header */}
+          <div className="temple-gradient text-white p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsOpen(false)}
+                className="text-white hover:bg-white/20 w-10 h-10 p-0"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <Bot className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Sribot</h3>
+                  <p className="text-xs opacity-75">Temple Assistant</p>
+                </div>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowApiKeyDialog(true)}
+              className="text-white hover:bg-white/20 w-8 h-8 p-0"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-br from-orange-50 to-yellow-50">
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+                className={`flex gap-3 ${message.isBot ? 'justify-start' : 'justify-end'}`}
               >
+                {message.isBot && (
+                  <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                )}
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm transition-all duration-200 ${
-                    message.sender === 'user'
-                      ? 'bg-primary text-white ml-4'
-                      : 'bg-muted dark:bg-gray-700 text-foreground dark:text-white mr-4'
+                  className={`max-w-[75%] p-3 rounded-2xl shadow-md ${
+                    message.isBot
+                      ? 'bg-white border border-orange-100 text-gray-800'
+                      : 'bg-gradient-to-br from-orange-500 to-red-500 text-white'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{message.text}</p>
-                  <p className={`text-xs mt-1 opacity-70 ${
-                    message.sender === 'user' ? 'text-right' : 'text-left'
-                  }`}>
-                    {formatTime(message.timestamp)}
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                  <p className={`text-xs mt-2 opacity-70 ${message.isBot ? 'text-gray-500' : 'text-orange-100'}`}>
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
+                {!message.isBot && (
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                )}
               </div>
             ))}
             {isLoading && (
-              <div className="flex justify-start animate-fade-in">
-                <div className="bg-muted dark:bg-gray-700 rounded-2xl px-4 py-3 mr-4 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-sm text-muted-foreground dark:text-gray-300">Sribot is typing...</span>
+              <div className="flex gap-3 justify-start">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
+                <div className="bg-white border border-orange-100 p-3 rounded-2xl shadow-md">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+                    <span className="text-sm text-gray-600">Sribot is thinking...</span>
+                  </div>
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
-        </ScrollArea>
 
-        <div className="border-t border-border dark:border-gray-600 p-4">
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <div className="flex-1 relative">
-              <Input
-                ref={inputRef}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="Ask Sribot about temple services..."
-                disabled={isLoading}
-                className="pr-12 bg-background dark:bg-gray-700 border-border dark:border-gray-600 focus:border-primary transition-colors duration-200"
-                maxLength={500}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleVoiceInput}
-                disabled={isLoading}
-                className={`absolute right-1 top-1 h-8 w-8 p-0 hover:bg-muted dark:hover:bg-gray-600 transition-colors duration-200 ${
-                  isListening ? 'text-red-500 animate-pulse' : 'text-muted-foreground'
-                }`}
-                aria-label={isListening ? "Listening..." : "Voice input"}
-              >
-                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              </Button>
+          {/* Input - Floating curved box */}
+          <div className="p-4 bg-white/95 backdrop-blur-sm">
+            <div className="bg-white rounded-full shadow-lg p-2 border border-orange-200">
+              <div className="flex gap-2 items-center">
+                <Input
+                  ref={inputRef}
+                  placeholder="Ask me about temple services, events, or guidance..."
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  disabled={isLoading}
+                  className="flex-1 border-0 focus:ring-0 focus:border-0 bg-transparent"
+                />
+                <Button
+                  onClick={sendMessage}
+                  disabled={isLoading || !inputMessage.trim()}
+                  className="temple-gradient text-white hover:shadow-lg transition-all duration-200 rounded-full w-12 h-12 p-0"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
-            <Button
-              type="submit"
-              disabled={!inputText.trim() || isLoading}
-              className="bg-primary hover:bg-primary/90 text-white transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-              aria-label="Send message"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </form>
-          <div className="flex justify-between items-center mt-2 text-xs text-muted-foreground dark:text-gray-400">
-            <span>Powered by AI</span>
-            <span>{inputText.length}/500</span>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              🙏 Powered by divine AI • Real-time temple data
+            </p>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+
+      {/* Chat Window - Desktop */}
+      {isOpen && !isMobile && (
+        <Card className={`fixed bottom-6 right-6 w-96 transition-all duration-300 z-50 shadow-2xl border-2 border-orange-200/50 ${
+          isMinimized ? 'h-16' : 'h-[500px]'
+        }`}>
+          <CardHeader className="temple-gradient text-white p-4 rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <Bot className="w-5 h-5" />
+                </div>
+                Sribot - Temple Assistant
+                {realTimeData.lastUpdated && (
+                  <span className="text-xs opacity-75">
+                    (Live Data)
+                  </span>
+                )}
+              </CardTitle>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowApiKeyDialog(true)}
+                  className="text-white hover:bg-white/20 w-8 h-8 p-0"
+                >
+                  <Settings className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsMinimized(!isMinimized)}
+                  className="text-white hover:bg-white/20 w-8 h-8 p-0"
+                >
+                  <Minimize2 className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsOpen(false)}
+                  className="text-white hover:bg-white/20 w-8 h-8 p-0"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          
+          {!isMinimized && (
+            <CardContent className="p-0 flex flex-col h-[436px]">
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-br from-orange-50 to-yellow-50">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex gap-3 ${message.isBot ? 'justify-start' : 'justify-end'}`}
+                  >
+                    {message.isBot && (
+                      <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                        <Bot className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                    <div
+                      className={`max-w-[280px] p-3 rounded-2xl shadow-md ${
+                        message.isBot
+                          ? 'bg-white border border-orange-100 text-gray-800'
+                          : 'bg-gradient-to-br from-orange-500 to-red-500 text-white'
+                      }`}
+                    >
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                      <p className={`text-xs mt-2 opacity-70 ${message.isBot ? 'text-gray-500' : 'text-orange-100'}`}>
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    {!message.isBot && (
+                      <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {isLoading && (
+                  <div className="flex gap-3 justify-start">
+                    <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                      <Bot className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="bg-white border border-orange-100 p-3 rounded-2xl shadow-md">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+                        <span className="text-sm text-gray-600">Sribot is thinking...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Input */}
+              <div className="p-4 border-t bg-white">
+                <div className="flex gap-2">
+                  <Input
+                    ref={inputRef}
+                    placeholder="Ask me about temple services, events, or guidance..."
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    disabled={isLoading}
+                    className="flex-1 border border-orange-200 focus:border-orange-400 focus:ring-orange-200"
+                  />
+                  <Button
+                    onClick={sendMessage}
+                    disabled={isLoading || !inputMessage.trim()}
+                    className="temple-gradient text-white hover:shadow-lg transition-all duration-200 px-4"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  🙏 Powered by divine AI • Real-time temple data
+                </p>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
+
+      <ApiKeyDialog 
+        isOpen={showApiKeyDialog} 
+        onClose={() => setShowApiKeyDialog(false)} 
+      />
+    </>
   );
 };
+
+// Enhanced multilingual capabilities
+const getMultilingualPrompt = (message: string, language: string = 'en') => {
+  const languageInstructions = {
+    en: "Respond in English with occasional Sanskrit mantras",
+    hi: "हिंदी में उत्तर दें और संस्कृत मंत्रों का उपयोग करें",
+    te: "తెలుగులో సమాధానం ఇవ్వండి మరియు సంస్కృత మంత్రాలను ఉపయోగించండి",
+    ta: "தமிழில் பதிலளிக்கவும் மற்றும் சமஸ்கிருத மந்திரங்களைப் பயன்படுத்தவும்",
+    kn: "ಕನ್ನಡದಲ್ಲಿ ಉತ್ತರಿಸಿ ಮತ್ತು ಸಂಸ್ಕೃತ ಮಂತ್ರಗಳನ್ನು ಬಳಸಿ"
+  };
+
+  const instruction = languageInstructions[language as keyof typeof languageInstructions] || languageInstructions.en;
+  return `${instruction}. User message: ${message}`;
+};
+
+// Helper function for multilingual welcome messages
+function getWelcomeMessage(lang: string): string {
+  const messages = {
+    en: "🙏 Namaste! I'm Sribot, your spiritual guide for Sri Balaji Temple. I can help you in multiple languages - English, Hindi, Telugu, Tamil, and Kannada. How can I assist you with temple services, events, or spiritual guidance today?",
+    hi: "🙏 नमस्ते! मैं श्रीबॉट हूं, श्री बालाजी मंदिर का आपका आध्यात्मिक मार्गदर्शक। मैं कई भाषाओं में सहायता कर सकता हूं। मैं आज मंदिर सेवाओं, कार्यक्रमों या आध्यात्मिक मार्गदर्शन में आपकी कैसे सहायता कर सकता हूं?",
+    te: "🙏 నమస్తే! నేను శ్రీబాట్, శ్రీ బాలాజీ దేవాలయానికి మీ ఆధ్యాత్మిక మార్గదర్శకుడిని। నేను అనేక భాషల్లో సహాయం చేయగలను। దేవాలయ సేవలు, కార్యక్రమాలు లేదా ఆధ్యాత్మిక మార్గదర్శనంలో నేను ఈరోజు మీకు ఎలా సహాయం చేయగలను?",
+    ta: "🙏 வணக்கம்! நான் ஸ்ரீபாட், ஸ்ரீ பாலாஜி கோவிலுக்கான உங்கள் ஆன்மிக வழிகாட்டி. நான் பல மொழிகளில் உதவ முடியும். கோவில் சேவைகள், நிகழ்வுகள் அல்லது ஆன்மிக வழிகாட்டுதலில் இன்று நான் உங்களுக்கு எப்படி உதவ முடியும்?",
+    kn: "🙏 ನಮಸ್ಕಾರ! ನಾನು ಶ್ರೀಬಾಟ್, ಶ್ರೀ ಬಾಲಾಜಿ ದೇವಾಲಯಕ್ಕೆ ನಿಮ್ಮ ಆಧ್ಯಾತ್ಮಿಕ ಮಾರ್ಗದರ್ಶಿ. ನಾನು ಅನೇಕ ಭಾಷೆಗಳಲ್ಲಿ ಸಹಾಯ ಮಾಡಬಹುದು. ದೇವಾಲಯ ಸೇವೆಗಳು, ಕಾರ್ಯಕ್ರಮಗಳು ಅಥವಾ ಆಧ್ಯಾತ್ಮಿಕ ಮಾರ್ಗದರ್ಶನದಲ್ಲಿ ನಾನು ಇಂದು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?"
+  };
+  return messages[lang as keyof typeof messages] || messages.en;
+}
 
 export default Sribot;
