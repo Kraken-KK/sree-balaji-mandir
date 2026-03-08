@@ -11,7 +11,7 @@ import { motion } from 'framer-motion';
 import divineTempleImg from '@/assets/divine-temple.jpg';
 
 const Auth = () => {
-  const { signUp, signIn, signInWithGoogle } = useAuth();
+  const { signUp, signIn, signInWithGoogle, signInWithApple } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
