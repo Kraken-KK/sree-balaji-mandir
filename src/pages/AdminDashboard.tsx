@@ -5,21 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  BarChart3, 
-  Users, 
-  QrCode, 
-  Settings, 
-  Calendar,
-  Image,
-  CreditCard,
-  Activity,
-  ShieldCheck,
-  Menu,
-  X,
-  Wrench,
-  Camera,
-  UserCheck,
-  Send
+  BarChart3, Users, QrCode, Calendar, Image, CreditCard, Activity,
+  ShieldCheck, Menu, X, Wrench, UserCheck, Send, Trash2, RotateCcw
 } from 'lucide-react';
 import { AdminCodeInput } from '@/components/AdminCodeInput';
 import { AdminAnalytics } from '@/components/AdminAnalytics';
