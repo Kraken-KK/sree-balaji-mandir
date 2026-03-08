@@ -95,46 +95,22 @@ const AdminDashboard = () => {
         .select(`*, services (name, price)`)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('RPC error:', error);
-        // Fallback to regular query if RPC doesn't work
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('tickets')
-          .select(`
-            *,
-            services (name, price)
-          `)
-          .order('created_at', { ascending: false });
-
-        if (fallbackError) throw fallbackError;
-        
-        // Transform fallback data to match expected format
-        const transformedData = fallbackData?.map(ticket => ({
-          ...ticket,
-          services: ticket.services ? {
-            name: ticket.services.name,
-            price: ticket.services.price
-          } : null
-        })) || [];
-        
-        setTickets(transformedData);
-      } else {
-        // Transform RPC data to match expected format
-        const transformedData = data?.map((ticket: any) => ({
-          id: ticket.id,
-          ticket_number: ticket.ticket_number,
-          customer_name: ticket.customer_name,
-          customer_email: ticket.customer_email,
-          status: ticket.status,
-          created_at: ticket.created_at,
-          services: ticket.services && typeof ticket.services === 'object' ? {
-            name: ticket.services.name || 'N/A',
-            price: ticket.services.price || 0
-          } : null
-        })) || [];
-        
-        setTickets(transformedData);
-      }
+      if (error) throw error;
+      
+      const transformedData = (data || []).map((ticket: any) => ({
+        id: ticket.id,
+        ticket_number: ticket.ticket_number,
+        customer_name: ticket.customer_name,
+        customer_email: ticket.customer_email,
+        status: ticket.status,
+        created_at: ticket.created_at,
+        services: ticket.services ? {
+          name: ticket.services.name,
+          price: ticket.services.price
+        } : null
+      }));
+      
+      setTickets(transformedData);
 
       console.log('Fetched tickets:', data?.length || 0);
       
