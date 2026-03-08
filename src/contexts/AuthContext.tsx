@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [subscriberData, setSubscriberData] = useState<{email: string, name: string}>({email: '', name: ''});
   const { toast } = useToast();
 
-  const ADMIN_CODE = "551010";
+  const ADMIN_CODE = "552010";
 
   useEffect(() => {
     let isMounted = true;

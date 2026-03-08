@@ -23,7 +23,7 @@ export const AdminCodeInput: React.FC<AdminCodeInputProps> = ({ onSuccess, loadi
     setIsLoading(true);
     
     // Simple admin code validation (you can replace this with your actual logic)
-    if (adminCode === '123456') {
+    if (adminCode === '552010') {
       toast({
         title: "Access Granted",
         description: "Welcome to the admin dashboard",

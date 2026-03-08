@@ -33,7 +33,7 @@ const ServiceCancellation = () => {
         .from('tickets')
         .select('*')
         .eq('ticket_number', ticketNumber.trim())
-        .single();
+        .maybeSingle();
 
       if (fetchError || !ticket) {
         toast({

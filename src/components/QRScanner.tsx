@@ -57,7 +57,7 @@ const QRScanner: React.FC = () => {
           services (name, price)
         `)
         .eq('qr_code', result)
-        .single();
+        .maybeSingle();
 
       console.log('Ticket query result:', { ticket, error });
 
