@@ -1,9 +1,7 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -11,25 +9,17 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { CreditCard, LogIn } from 'lucide-react';
+import { CreditCard, LogIn, Heart } from 'lucide-react';
 
 const Donations = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [donationData, setDonationData] = useState({
-    amount: '',
-    customAmount: '',
-    donorName: '',
-    email: '',
-    phone: '',
-    purpose: 'general',
-  });
+  const [donationData, setDonationData] = useState({ amount: '', customAmount: '', donorName: '', email: '', phone: '', purpose: 'general' });
   const [paymentLoading, setPaymentLoading] = useState(false);
 
   const predefinedAmounts = ['100', '500', '1000', '2500', '5000', 'Other'];
-
   const donationPurposes = [
     { value: 'general', label: 'General Temple Fund' },
     { value: 'annadanam', label: 'Annadanam (Food Service)' },
@@ -40,295 +30,116 @@ const Donations = () => {
 
   const handleDonation = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!user) {
-      toast({
-        title: 'Authentication Required',
-        description: 'Please sign in to make donations.',
-        variant: 'destructive'
-      });
-      navigate('/auth');
-      return;
-    }
-    
-    if (!donationData.donorName || !donationData.email || !donationData.phone) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please fill in all required fields.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
+    if (!user) { navigate('/auth'); return; }
     const finalAmount = donationData.amount === 'Other' ? donationData.customAmount : donationData.amount;
-    
-    if (!finalAmount || Number(finalAmount) <= 0) {
-      toast({
-        title: 'Invalid Amount',
-        description: 'Please enter a valid donation amount.',
-        variant: 'destructive'
-      });
-      return;
-    }
+    if (!finalAmount || Number(finalAmount) <= 0) { toast({ title: 'Invalid Amount', variant: 'destructive' }); return; }
 
     setPaymentLoading(true);
     try {
-      const selectedPurpose = donationPurposes.find(p => p.value === donationData.purpose)?.label || 'General Temple Fund';
-      
       const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
-          amount: Number(finalAmount),
-          currency: 'inr',
-          description: selectedPurpose,
-          customerEmail: donationData.email,
-          customerName: donationData.donorName,
-          type: 'donation'
-        }
+        body: { amount: Number(finalAmount), currency: 'inr', description: donationPurposes.find(p => p.value === donationData.purpose)?.label, customerEmail: donationData.email, customerName: donationData.donorName, type: 'donation' }
       });
-
       if (error) throw error;
-
-      // Open Stripe checkout in a new tab
       window.open(data.url, '_blank');
-      
-      toast({
-        title: 'Redirecting to Payment',
-        description: 'Please complete your donation in the new window.',
-      });
-      
-      setDonationData({
-        amount: '',
-        customAmount: '',
-        donorName: '',
-        email: '',
-        phone: '',
-        purpose: 'general',
-      });
-    } catch (error) {
-      console.error('Donation error:', error);
-      toast({
-        title: 'Payment Error',
-        description: 'Failed to create payment session. Please try again.',
-        variant: 'destructive'
-      });
-    } finally {
-      setPaymentLoading(false);
-    }
+      toast({ title: 'Redirecting to Payment' });
+      setDonationData({ amount: '', customAmount: '', donorName: '', email: '', phone: '', purpose: 'general' });
+    } catch { toast({ title: 'Payment Error', variant: 'destructive' }); }
+    finally { setPaymentLoading(false); }
   };
 
+  const impactItems = [
+    { amount: '₹100', desc: 'Feeds 5 devotees', color: 'bg-primary/10' },
+    { amount: '₹500', desc: 'Temple oil for 1 week', color: 'bg-accent/10' },
+    { amount: '₹1,000', desc: 'Special puja materials', color: 'bg-gold/10' },
+    { amount: '₹5,000', desc: 'Festival celebration', color: 'bg-lotus/10' },
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen gradient-warm-bg">
       <Navbar />
-      
-      <div className="container mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">{t('donation_title')}</h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            {t('donation_subtitle')}
-          </p>
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center mb-14 animate-fade-in">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent/10 mb-5">
+            <Heart className="w-8 h-8 text-accent" />
+          </div>
+          <h1 className="text-4xl md:text-5xl font-display font-bold mb-4 text-gradient-devotional">{t('donation_title') || 'Make a Donation'}</h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{t('donation_subtitle') || 'Support our temple activities and community welfare'}</p>
           {!user && (
-            <Card className="mt-6 max-w-md mx-auto">
-              <CardContent className="p-6 text-center">
-                <LogIn className="w-12 h-12 mx-auto mb-4 text-primary" />
-                <h3 className="font-semibold mb-2">Sign In Required</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Please sign in to make donations and receive tax receipts
-                </p>
-                <Button onClick={() => navigate('/auth')} className="temple-gradient text-white">
-                  Sign In Now
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="glass-card max-w-sm mx-auto mt-8 p-6 text-center">
+              <LogIn className="w-10 h-10 mx-auto mb-3 text-primary" />
+              <h3 className="font-display font-semibold mb-2">Sign In Required</h3>
+              <p className="text-sm text-muted-foreground mb-4">Sign in to make donations and receive receipts</p>
+              <Button onClick={() => navigate('/auth')} className="gradient-devotional text-white border-0 rounded-xl">Sign In</Button>
+            </div>
           )}
         </div>
 
-        <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Donation Form */}
-          <Card className={!user ? 'opacity-50 pointer-events-none' : ''}>
-            <CardHeader>
-              <CardTitle>Make a Donation</CardTitle>
-              <CardDescription>
-                Your contribution helps us maintain the temple and serve the community
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleDonation} className="space-y-6">
-                {/* Amount Selection */}
-                <div>
-                  <Label className="text-base font-medium mb-3 block">Select Amount (₹)</Label>
-                  <RadioGroup
-                    value={donationData.amount}
-                    onValueChange={(value) => setDonationData({ ...donationData, amount: value })}
-                    className="grid grid-cols-3 gap-3"
-                  >
-                    {predefinedAmounts.map((amount) => (
-                      <div key={amount} className="relative">
-                        <RadioGroupItem
-                          value={amount}
-                          id={amount}
-                          className="peer sr-only"
-                        />
-                        <Label
-                          htmlFor={amount}
-                          className="flex items-center justify-center p-3 border rounded-lg cursor-pointer hover:bg-accent peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition-colors"
-                        >
-                          {amount === 'Other' ? 'Other' : `₹${amount}`}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
+        <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-8">
+          {/* Form */}
+          <div className={`glass-card p-6 md:p-8 ${!user ? 'opacity-50 pointer-events-none' : ''}`}>
+            <h2 className="text-xl font-display font-semibold mb-6">Donation Details</h2>
+            <form onSubmit={handleDonation} className="space-y-6">
+              <div>
+                <Label className="text-sm font-medium mb-3 block">Select Amount (₹)</Label>
+                <RadioGroup value={donationData.amount} onValueChange={(v) => setDonationData({ ...donationData, amount: v })} className="grid grid-cols-3 gap-2">
+                  {predefinedAmounts.map(a => (
+                    <div key={a} className="relative">
+                      <RadioGroupItem value={a} id={a} className="peer sr-only" />
+                      <Label htmlFor={a} className="flex items-center justify-center p-3 glass rounded-xl cursor-pointer text-sm font-medium peer-data-[state=checked]:gradient-devotional peer-data-[state=checked]:text-white transition-all duration-300">
+                        {a === 'Other' ? 'Other' : `₹${a}`}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+              {donationData.amount === 'Other' && (
+                <div><Label>Custom Amount (₹)</Label><Input type="number" min="1" placeholder="Amount" value={donationData.customAmount} onChange={(e) => setDonationData({ ...donationData, customAmount: e.target.value })} className="rounded-xl" /></div>
+              )}
+              <div>
+                <Label className="text-sm font-medium mb-3 block">Purpose</Label>
+                <RadioGroup value={donationData.purpose} onValueChange={(v) => setDonationData({ ...donationData, purpose: v })} className="space-y-2">
+                  {donationPurposes.map(p => (
+                    <div key={p.value} className="flex items-center space-x-3 glass rounded-xl p-3">
+                      <RadioGroupItem value={p.value} id={p.value} />
+                      <Label htmlFor={p.value} className="text-sm cursor-pointer">{p.label}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+              <div className="space-y-3">
+                <h3 className="font-display font-medium">Donor Information</h3>
+                <div><Label>Full Name</Label><Input value={donationData.donorName} onChange={(e) => setDonationData({ ...donationData, donorName: e.target.value })} className="rounded-xl" required /></div>
+                <div><Label>Email</Label><Input type="email" value={donationData.email} onChange={(e) => setDonationData({ ...donationData, email: e.target.value })} className="rounded-xl" required /></div>
+                <div><Label>Phone</Label><Input type="tel" value={donationData.phone} onChange={(e) => setDonationData({ ...donationData, phone: e.target.value })} className="rounded-xl" required /></div>
+              </div>
+              <Button type="submit" disabled={!user || !donationData.amount || paymentLoading} className="w-full gradient-devotional text-white border-0 rounded-xl py-5 text-lg shadow-lg">
+                <CreditCard className="w-5 h-5 mr-2" />
+                {paymentLoading ? 'Processing...' : `Donate ₹${donationData.amount === 'Other' ? donationData.customAmount || '0' : donationData.amount || '0'}`}
+              </Button>
+            </form>
+          </div>
 
-                {/* Custom Amount */}
-                {donationData.amount === 'Other' && (
-                  <div>
-                    <Label htmlFor="customAmount">Custom Amount (₹)</Label>
-                    <Input
-                      id="customAmount"
-                      type="number"
-                      min="1"
-                      placeholder="Enter amount in rupees"
-                      value={donationData.customAmount}
-                      onChange={(e) => setDonationData({ ...donationData, customAmount: e.target.value })}
-                      required
-                    />
-                  </div>
-                )}
-
-                {/* Purpose */}
-                <div>
-                  <Label className="text-base font-medium mb-3 block">Donation Purpose</Label>
-                  <RadioGroup
-                    value={donationData.purpose}
-                    onValueChange={(value) => setDonationData({ ...donationData, purpose: value })}
-                    className="space-y-2"
-                  >
-                    {donationPurposes.map((purpose) => (
-                      <div key={purpose.value} className="flex items-center space-x-2">
-                        <RadioGroupItem value={purpose.value} id={purpose.value} />
-                        <Label htmlFor={purpose.value}>{purpose.label}</Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-
-                {/* Donor Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Donor Information</h3>
-                  <div>
-                    <Label htmlFor="donorName">Full Name</Label>
-                    <Input
-                      id="donorName"
-                      type="text"
-                      value={donationData.donorName}
-                      onChange={(e) => setDonationData({ ...donationData, donorName: e.target.value })}
-                      placeholder="Enter your full name"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={donationData.email}
-                      onChange={(e) => setDonationData({ ...donationData, email: e.target.value })}
-                      placeholder="Enter your email"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={donationData.phone}
-                      onChange={(e) => setDonationData({ ...donationData, phone: e.target.value })}
-                      placeholder="Enter your phone number"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="w-full temple-gradient text-white text-lg py-6"
-                  disabled={!user || !donationData.amount || (donationData.amount === 'Other' && !donationData.customAmount) || paymentLoading}
-                >
-                  <CreditCard className="w-5 h-5 mr-2" />
-                  {paymentLoading ? 'Processing...' : `${t('donate_now')} - ₹${donationData.amount === 'Other' ? donationData.customAmount || '0' : donationData.amount || '0'}`}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Impact Information */}
+          {/* Sidebar */}
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Impact</CardTitle>
-                <CardDescription>
-                  See how your donations make a difference
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
-                  <span>₹100</span>
-                  <span className="text-sm text-muted-foreground">Feeds 5 devotees</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                  <span>₹500</span>
-                  <span className="text-sm text-muted-foreground">Temple oil for 1 week</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                  <span>₹1000</span>
-                  <span className="text-sm text-muted-foreground">Special puja materials</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
-                  <span>₹5000</span>
-                  <span className="text-sm text-muted-foreground">Festival celebration</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment Security</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>✓ Secure payment gateway</li>
-                  <li>✓ 256-bit SSL encryption</li>
-                  <li>✓ Tax-exempt donation receipt</li>
-                  <li>✓ 80G tax benefit available</li>
-                  <li>✓ Transparent fund utilization</li>
-                  <li>✓ Authentication required for all donations</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Donations</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Anonymous</span>
-                    <span className="text-sm font-medium">₹2,500</span>
+            <div className="glass-card p-6">
+              <h3 className="font-display font-semibold mb-5">Your Impact</h3>
+              <div className="space-y-3">
+                {impactItems.map((item, i) => (
+                  <div key={i} className={`flex items-center justify-between p-3.5 ${item.color} rounded-xl`}>
+                    <span className="font-semibold text-sm">{item.amount}</span>
+                    <span className="text-sm text-muted-foreground">{item.desc}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Devotee Family</span>
-                    <span className="text-sm font-medium">₹5,000</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Local Community</span>
-                    <span className="text-sm font-medium">₹1,000</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                ))}
+              </div>
+            </div>
+            <div className="glass-card p-6">
+              <h3 className="font-display font-semibold mb-4">Payment Security</h3>
+              <ul className="space-y-2.5 text-sm text-muted-foreground">
+                {['Secure payment gateway', '256-bit SSL encryption', 'Tax-exempt donation receipt', '80G tax benefit available', 'Transparent fund utilization'].map((t, i) => (
+                  <li key={i} className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary" /> {t}</li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </div>
