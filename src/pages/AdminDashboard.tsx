@@ -464,11 +464,26 @@ const AdminDashboard = () => {
                               <p className="text-gray-400">{new Date(ticket.created_at).toLocaleString()}</p>
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right space-y-3">
                             <p className="text-3xl font-bold text-white bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
                               ₹{ticket.services?.price || 0}
                             </p>
                             <p className="text-gray-400 text-sm">{new Date(ticket.created_at).toLocaleDateString()}</p>
+                            <div className="flex gap-2 justify-end flex-wrap">
+                              {ticket.status === 'active' && (
+                                <Button size="sm" onClick={() => handleUpdateTicketStatus(ticket.id, 'used')} className="bg-green-600 hover:bg-green-700 text-xs rounded-lg">
+                                  Mark Used
+                                </Button>
+                              )}
+                              {ticket.status === 'used' && (
+                                <Button size="sm" onClick={() => handleUpdateTicketStatus(ticket.id, 'active')} variant="outline" className="bg-white/10 border-white/20 text-white text-xs rounded-lg">
+                                  Reactivate
+                                </Button>
+                              )}
+                              <Button size="sm" variant="destructive" onClick={() => handleDeleteTicket(ticket.id)} className="text-xs rounded-lg">
+                                Delete
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </CardContent>
