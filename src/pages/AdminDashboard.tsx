@@ -49,8 +49,8 @@ interface UserData {
   full_name: string | null;
   username: string | null;
   phone: string | null;
-  bio: string | null;
-  location: string | null;
+  avatar_url: string | null;
+  newsletter: boolean | null;
   updated_at: string | null;
 }
 
@@ -89,49 +89,28 @@ const AdminDashboard = () => {
     try {
       console.log('Fetching all tickets...');
       
-      // Use the admin RPC function to get all tickets
-      const { data, error } = await supabase.rpc('get_all_tickets_admin');
+      // Fetch all tickets directly
+      const { data, error } = await supabase
+        .from('tickets')
+        .select(`*, services (name, price)`)
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('RPC error:', error);
-        // Fallback to regular query if RPC doesn't work
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('tickets')
-          .select(`
-            *,
-            services (name, price)
-          `)
-          .order('created_at', { ascending: false });
-
-        if (fallbackError) throw fallbackError;
-        
-        // Transform fallback data to match expected format
-        const transformedData = fallbackData?.map(ticket => ({
-          ...ticket,
-          services: ticket.services ? {
-            name: ticket.services.name,
-            price: ticket.services.price
-          } : null
-        })) || [];
-        
-        setTickets(transformedData);
-      } else {
-        // Transform RPC data to match expected format
-        const transformedData = data?.map((ticket: any) => ({
-          id: ticket.id,
-          ticket_number: ticket.ticket_number,
-          customer_name: ticket.customer_name,
-          customer_email: ticket.customer_email,
-          status: ticket.status,
-          created_at: ticket.created_at,
-          services: ticket.services && typeof ticket.services === 'object' ? {
-            name: ticket.services.name || 'N/A',
-            price: ticket.services.price || 0
-          } : null
-        })) || [];
-        
-        setTickets(transformedData);
-      }
+      if (error) throw error;
+      
+      const transformedData = (data || []).map((ticket: any) => ({
+        id: ticket.id,
+        ticket_number: ticket.ticket_number,
+        customer_name: ticket.customer_name,
+        customer_email: ticket.customer_email,
+        status: ticket.status,
+        created_at: ticket.created_at,
+        services: ticket.services ? {
+          name: ticket.services.name,
+          price: ticket.services.price
+        } : null
+      }));
+      
+      setTickets(transformedData);
 
       console.log('Fetched tickets:', data?.length || 0);
       
@@ -162,22 +141,13 @@ const AdminDashboard = () => {
     try {
       console.log('Fetching all users...');
       
-      // Use the admin RPC function to get all users
-      const { data, error } = await supabase.rpc('get_all_users_admin');
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('RPC error:', error);
-        // Fallback to regular query if RPC doesn't work
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (fallbackError) throw fallbackError;
-        setUsers(fallbackData || []);
-      } else {
-        setUsers(data || []);
-      }
+      if (error) throw error;
+      setUsers((data || []) as UserData[]);
 
       console.log('Fetched users:', data?.length || 0);
     } catch (error) {

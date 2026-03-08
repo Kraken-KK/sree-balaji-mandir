@@ -9,6 +9,7 @@ import Donations from '@/pages/Donations';
 import Gallery from '@/pages/Gallery';
 import Contact from '@/pages/Contact';
 import Auth from '@/pages/Auth';
+import SignUp from '@/pages/SignUp';
 import Settings from '@/pages/Settings';
 import History from '@/pages/History';
 import AdminDashboard from '@/pages/AdminDashboard';
@@ -40,6 +41,7 @@ function App() {
                   <Route path="/gallery" element={<Gallery />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/signup" element={<SignUp />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/history" element={<History />} />
                   <Route path="/admin" element={<AdminDashboard />} />
