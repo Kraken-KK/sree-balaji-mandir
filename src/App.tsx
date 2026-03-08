@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Index from '@/pages/Index';
 import Landing from '@/pages/Landing';
@@ -15,6 +14,7 @@ import History from '@/pages/History';
 import AdminDashboard from '@/pages/AdminDashboard';
 import PaymentSuccess from '@/pages/PaymentSuccess';
 import Sribot from '@/components/Sribot';
+import SplashScreen from '@/components/SplashScreen';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -25,12 +25,22 @@ import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 const queryClient = new QueryClient();
 
 function App() {
+  const [showSplash, setShowSplash] = useState(() => {
+    return !sessionStorage.getItem('splash-shown');
+  });
+
+  const handleSplashComplete = useCallback(() => {
+    setShowSplash(false);
+    sessionStorage.setItem('splash-shown', 'true');
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ThemeProvider>
           <AuthProvider>
             <LanguageProvider>
+              {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
               <div className="min-h-screen bg-background">
                 <Routes>
                   <Route path="/" element={<Index />} />
