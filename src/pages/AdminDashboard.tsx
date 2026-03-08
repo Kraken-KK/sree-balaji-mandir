@@ -141,22 +141,13 @@ const AdminDashboard = () => {
     try {
       console.log('Fetching all users...');
       
-      // Use the admin RPC function to get all users
-      const { data, error } = await supabase.rpc('get_all_users_admin');
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('RPC error:', error);
-        // Fallback to regular query if RPC doesn't work
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (fallbackError) throw fallbackError;
-        setUsers(fallbackData || []);
-      } else {
-        setUsers(data || []);
-      }
+      if (error) throw error;
+      setUsers((data || []) as UserData[]);
 
       console.log('Fetched users:', data?.length || 0);
     } catch (error) {

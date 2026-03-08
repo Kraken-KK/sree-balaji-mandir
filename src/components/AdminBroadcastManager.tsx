@@ -29,7 +29,9 @@ const AdminBroadcastManager = () => {
 
   const fetchAllUsers = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_all_users_admin');
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*');
       if (error) throw error;
       setAllUsers(data || []);
     } catch (error) {

@@ -9,9 +9,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Tables } from '@/integrations/supabase/types';
-
-type Event = Tables<'events'>;
+interface Event {
+  id: string;
+  name: string;
+  date: string;
+  time: string;
+  location: string;
+  description: string | null;
+  image: string | null;
+  participants: number | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export const AdminEventManager = () => {
   const { toast } = useToast();
