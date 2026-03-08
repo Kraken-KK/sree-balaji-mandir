@@ -49,8 +49,8 @@ interface UserData {
   full_name: string | null;
   username: string | null;
   phone: string | null;
-  bio: string | null;
-  location: string | null;
+  avatar_url: string | null;
+  newsletter: boolean | null;
   updated_at: string | null;
 }
 
