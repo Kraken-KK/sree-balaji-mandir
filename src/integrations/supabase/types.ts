@@ -86,6 +86,30 @@ export type Database = {
         }
         Relationships: []
       }
+      newsletter_subscribers: {
+        Row: {
+          email: string
+          id: string
+          is_active: boolean | null
+          name: string | null
+          subscribed_at: string | null
+        }
+        Insert: {
+          email: string
+          id?: string
+          is_active?: boolean | null
+          name?: string | null
+          subscribed_at?: string | null
+        }
+        Update: {
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string | null
+          subscribed_at?: string | null
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
