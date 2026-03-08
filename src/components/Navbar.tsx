@@ -52,7 +52,7 @@ const Navbar = () => {
   ];
 
   const handleAdminAccess = () => {
-    if (adminCode === '551010') {
+    if (adminCode === '552010') {
       setIsAdminDialogOpen(false);
       setAdminCode('');
       navigate('/admin');
