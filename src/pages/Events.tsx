@@ -35,7 +35,7 @@ const Events = () => {
     phone: '',
     members: 1,
   });
-  const [events, setEvents] = useState<Tables<'events'>[]>([]);
+  const [events, setEvents] = useState<EventType[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
 
