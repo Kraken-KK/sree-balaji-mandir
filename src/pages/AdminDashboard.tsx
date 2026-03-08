@@ -89,8 +89,11 @@ const AdminDashboard = () => {
     try {
       console.log('Fetching all tickets...');
       
-      // Use the admin RPC function to get all tickets
-      const { data, error } = await supabase.rpc('get_all_tickets_admin');
+      // Fetch all tickets directly
+      const { data, error } = await supabase
+        .from('tickets')
+        .select(`*, services (name, price)`)
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('RPC error:', error);
