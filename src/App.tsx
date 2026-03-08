@@ -41,6 +41,7 @@ function App() {
                   <Route path="/gallery" element={<Gallery />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/signup" element={<SignUp />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/history" element={<History />} />
                   <Route path="/admin" element={<AdminDashboard />} />
