@@ -160,8 +160,44 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleAuthentication = () => {
+  const handleAuthentication = async () => {
     setIsAuthenticated(true);
+    // Assign admin role to current user
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('user_roles' as any).upsert(
+          { user_id: user.id, role: 'admin' } as any,
+          { onConflict: 'user_id,role' }
+        );
+      }
+    } catch (e) {
+      console.error('Could not assign admin role:', e);
+    }
+  };
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    try {
+      const { error } = await supabase.from('tickets').delete().eq('id', ticketId);
+      if (error) throw error;
+      setTickets(prev => prev.filter(t => t.id !== ticketId));
+      toast({ title: "Ticket Deleted", description: "Ticket removed successfully." });
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({ title: "Delete Failed", description: "Could not delete ticket.", variant: "destructive" });
+    }
+  };
+
+  const handleUpdateTicketStatus = async (ticketId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase.from('tickets').update({ status: newStatus }).eq('id', ticketId);
+      if (error) throw error;
+      setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: newStatus } : t));
+      toast({ title: "Status Updated", description: `Ticket marked as ${newStatus}.` });
+    } catch (error) {
+      console.error('Status update error:', error);
+      toast({ title: "Update Failed", variant: "destructive" });
+    }
   };
 
   const menuItems = [
