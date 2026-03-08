@@ -9,6 +9,7 @@ import Donations from '@/pages/Donations';
 import Gallery from '@/pages/Gallery';
 import Contact from '@/pages/Contact';
 import Auth from '@/pages/Auth';
+import SignUp from '@/pages/SignUp';
 import Settings from '@/pages/Settings';
 import History from '@/pages/History';
 import AdminDashboard from '@/pages/AdminDashboard';
