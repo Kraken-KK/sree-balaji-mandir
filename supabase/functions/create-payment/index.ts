@@ -1,37 +1,28 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@14.21.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import Stripe from "https://esm.sh/stripe@18.5.0";
+import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Supabase configuration missing");
-    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: req.headers.get("Authorization")! },
-      },
-    });
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization")!;
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Authentication required" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -45,28 +36,36 @@ serve(async (req) => {
       throw new Error("Valid amount is required");
     }
 
-    // Initialize Stripe with the correct environment variable
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeSecretKey) {
-      throw new Error("Stripe secret key not found in environment variables");
+      throw new Error("Stripe secret key not found");
     }
 
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2023-10-16",
+      apiVersion: "2025-08-27.basil",
     });
 
-    // Create a one-time payment session
+    // Check for existing Stripe customer
+    const email = customerEmail || user.email;
+    const customers = await stripe.customers.list({ email, limit: 1 });
+    let customerId: string | undefined;
+    if (customers.data.length > 0) {
+      customerId = customers.data[0].id;
+    }
+
+    // Create checkout session with price_data for dynamic amounts
     const session = await stripe.checkout.sessions.create({
-      customer_email: customerEmail || user.email,
+      customer: customerId,
+      customer_email: customerId ? undefined : email,
       line_items: [
         {
           price_data: {
             currency: currency.toLowerCase(),
-            product_data: { 
+            product_data: {
               name: type === 'donation' ? `Donation - ${description}` : `Service - ${description}`,
-              description: description
+              description: description,
             },
-            unit_amount: Math.round(amount * 100), // Convert to paisa for INR
+            unit_amount: Math.round(amount * 100),
           },
           quantity: 1,
         },
@@ -75,16 +74,16 @@ serve(async (req) => {
       success_url: `${req.headers.get("origin")}/payment-success?session_id={CHECKOUT_SESSION_ID}&type=${type}&amount=${amount}&description=${encodeURIComponent(description)}`,
       cancel_url: `${req.headers.get("origin")}${type === 'donation' ? '/donations' : '/services'}`,
       metadata: {
-        type: type,
+        type,
         customer_name: customerName || user.user_metadata?.full_name || 'User',
-        description: description,
+        description,
         user_id: user.id,
         amount: amount.toString(),
-        currency: currency
-      }
+        currency,
+      },
     });
 
-    // Store payment record in database
+    // Store payment record
     const supabaseService = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -94,13 +93,13 @@ serve(async (req) => {
     await supabaseService.from('payments').insert({
       user_id: user.id,
       stripe_session_id: session.id,
-      amount: amount,
-      currency: currency,
-      type: type,
-      description: description,
+      amount,
+      currency,
+      type,
+      description,
       status: 'pending',
       customer_name: customerName || user.user_metadata?.full_name || 'User',
-      customer_email: customerEmail || user.email
+      customer_email: email,
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
