@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_services: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          service_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          service_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_services_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string
