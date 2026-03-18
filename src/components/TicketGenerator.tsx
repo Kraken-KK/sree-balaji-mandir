@@ -1,10 +1,7 @@
-
 import React from 'react';
 import QRCode from 'qrcode';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Calendar, MapPin, User, Hash } from 'lucide-react';
+import { Calendar, User, Hash, MapPin, Clock, Ticket } from 'lucide-react';
 
 interface TicketGeneratorProps {
   ticket: {
@@ -28,95 +25,117 @@ const TicketGenerator: React.FC<TicketGeneratorProps> = ({ ticket }) => {
       try {
         const url = await QRCode.toDataURL(ticket.qr_code, {
           width: 200,
-          margin: 2,
-          color: {
-            dark: '#000000',
-            light: '#FFFFFF'
-          }
+          margin: 1,
+          color: { dark: '#1a1a2e', light: '#FFFFFF' },
         });
         setQrCodeUrl(url);
       } catch (error) {
         console.error('Error generating QR code:', error);
       }
     };
-
     generateQR();
   }, [ticket.qr_code]);
 
+  const statusColors: Record<string, string> = {
+    active: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
+    used: 'bg-muted text-muted-foreground border-border',
+    cancelled: 'bg-destructive/10 text-destructive border-destructive/30',
+  };
+
   return (
-    <Card className="w-full max-w-md mx-auto bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 shadow-xl">
-      {/* Header with temple logo area */}
-      <CardHeader className="text-center bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-t-lg">
-        <div className="flex justify-center mb-2">
-          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-            <span className="text-orange-500 font-bold text-lg">🕉</span>
-          </div>
-        </div>
-        <CardTitle className="text-lg font-bold">Sree Balaji Mandir</CardTitle>
-        <p className="text-sm opacity-90">Service Ticket</p>
-      </CardHeader>
-
-      <CardContent className="p-6 space-y-4">
-        {/* Ticket Number */}
-        <div className="text-center">
-          <Badge variant="secondary" className="text-lg px-4 py-2 font-mono">
-            <Hash className="w-4 h-4 mr-1" />
-            {ticket.ticket_number}
-          </Badge>
-        </div>
-
-        <Separator />
-
-        {/* Customer Info */}
-        <div className="space-y-2">
-          <div className="flex items-center text-sm">
-            <User className="w-4 h-4 mr-2 text-gray-500" />
-            <span className="font-medium">{ticket.customer_name}</span>
-          </div>
-          <div className="text-xs text-gray-600">{ticket.customer_email}</div>
-        </div>
-
-        {/* Service Info */}
-        <div className="space-y-2">
-          <div className="text-sm font-medium text-gray-800">{ticket.service_name}</div>
-          {ticket.service_date && (
-            <div className="flex items-center text-xs text-gray-600">
-              <Calendar className="w-3 h-3 mr-1" />
-              Service Date: {new Date(ticket.service_date).toLocaleDateString()}
+    <div className="w-full max-w-md mx-auto relative">
+      {/* Ticket shape with notches */}
+      <div className="bg-card border-2 border-border rounded-2xl overflow-hidden shadow-xl">
+        {/* Header band */}
+        <div className="bg-gradient-to-r from-primary to-accent px-6 py-5 text-white relative">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+              <span className="text-lg">🕉</span>
             </div>
-          )}
-          <div className="flex items-center text-xs text-gray-600">
-            <Calendar className="w-3 h-3 mr-1" />
-            Booked: {new Date(ticket.booking_date).toLocaleDateString()}
+            <div>
+              <h3 className="font-display font-bold text-lg leading-tight">Sree Balaji Mandir</h3>
+              <p className="text-white/70 text-xs">Service Ticket</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-white/15 rounded-lg px-3 py-1.5 w-fit backdrop-blur-sm">
+            <Ticket className="w-3.5 h-3.5" />
+            <span className="font-mono text-sm font-bold tracking-wider">{ticket.ticket_number}</span>
           </div>
         </div>
 
-        <Separator />
-
-        {/* QR Code */}
-        <div className="text-center">
-          {qrCodeUrl && (
-            <img 
-              src={qrCodeUrl} 
-              alt="Ticket QR Code" 
-              className="mx-auto rounded-lg shadow-sm"
-              style={{ width: '120px', height: '120px' }}
-            />
-          )}
-          <p className="text-xs text-gray-500 mt-2">Scan to verify ticket</p>
+        {/* Notch separator */}
+        <div className="relative h-4">
+          <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-background rounded-full border-r-2 border-border" />
+          <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-background rounded-full border-l-2 border-border" />
+          <div className="mx-8 border-t-2 border-dashed border-border/50 mt-2" />
         </div>
 
-        {/* Status */}
-        <div className="text-center">
-          <Badge 
-            variant={ticket.status === 'active' ? 'default' : 'secondary'}
-            className="capitalize"
-          >
-            {ticket.status}
-          </Badge>
+        {/* Content */}
+        <div className="px-6 py-4 space-y-4">
+          {/* Service info */}
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Service</p>
+            <p className="font-display font-semibold text-lg text-foreground">{ticket.service_name}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                <User className="w-3 h-3" /> Name
+              </p>
+              <p className="text-sm font-medium text-foreground">{ticket.customer_name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Email</p>
+              <p className="text-sm font-medium text-foreground truncate">{ticket.customer_email}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {ticket.service_date && (
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <Calendar className="w-3 h-3" /> Service Date
+                </p>
+                <p className="text-sm font-medium text-foreground">
+                  {new Date(ticket.service_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+            )}
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Booked
+              </p>
+              <p className="text-sm font-medium text-foreground">
+                {new Date(ticket.booking_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </p>
+            </div>
+          </div>
+
+          {/* QR and Status */}
+          <div className="flex items-end justify-between pt-2">
+            <div className="text-center">
+              {qrCodeUrl && (
+                <img src={qrCodeUrl} alt="QR Code" className="rounded-xl shadow-sm border border-border" style={{ width: '100px', height: '100px' }} />
+              )}
+              <p className="text-[10px] text-muted-foreground mt-1">Scan to verify</p>
+            </div>
+            <div className="text-right">
+              <Badge className={`${statusColors[ticket.status] || statusColors.active} capitalize font-semibold border px-3 py-1`}>
+                {ticket.status}
+              </Badge>
+            </div>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Footer */}
+        <div className="bg-muted/50 px-6 py-3 text-center">
+          <p className="text-[10px] text-muted-foreground">
+            Present this ticket at the temple • Valid for the specified service date
+          </p>
+        </div>
+      </div>
+    </div>
   );
 };
 

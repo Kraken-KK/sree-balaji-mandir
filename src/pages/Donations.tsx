@@ -16,7 +16,7 @@ const Donations = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [donationData, setDonationData] = useState({ amount: '', customAmount: '', donorName: '', email: '', phone: '', purpose: 'general' });
+  const [donationData, setDonationData] = useState({ amount: '', customAmount: '', purpose: 'general' });
   const [paymentLoading, setPaymentLoading] = useState(false);
 
   const predefinedAmounts = ['100', '500', '1000', '2500', '5000', 'Other'];
@@ -32,26 +32,39 @@ const Donations = () => {
     e.preventDefault();
     if (!user) { navigate('/auth'); return; }
     const finalAmount = donationData.amount === 'Other' ? donationData.customAmount : donationData.amount;
-    if (!finalAmount || Number(finalAmount) <= 0) { toast({ title: 'Invalid Amount', variant: 'destructive' }); return; }
+    if (!finalAmount || Number(finalAmount) <= 0) {
+      toast({ title: 'Invalid Amount', variant: 'destructive' });
+      return;
+    }
 
     setPaymentLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: { amount: Number(finalAmount), currency: 'inr', description: donationPurposes.find(p => p.value === donationData.purpose)?.label, customerEmail: donationData.email, customerName: donationData.donorName, type: 'donation' }
+        body: {
+          amount: Number(finalAmount),
+          currency: 'inr',
+          description: donationPurposes.find((p) => p.value === donationData.purpose)?.label || 'Donation',
+          customerEmail: user.email,
+          customerName: user.user_metadata?.full_name || user.email?.split('@')[0],
+          type: 'donation',
+        },
       });
       if (error) throw error;
       window.open(data.url, '_blank');
       toast({ title: 'Redirecting to Payment' });
-      setDonationData({ amount: '', customAmount: '', donorName: '', email: '', phone: '', purpose: 'general' });
-    } catch { toast({ title: 'Payment Error', variant: 'destructive' }); }
-    finally { setPaymentLoading(false); }
+      setDonationData({ amount: '', customAmount: '', purpose: 'general' });
+    } catch {
+      toast({ title: 'Payment Error', description: 'Failed to initiate payment. Please try again.', variant: 'destructive' });
+    } finally {
+      setPaymentLoading(false);
+    }
   };
 
   const impactItems = [
     { amount: '₹100', desc: 'Feeds 5 devotees', color: 'bg-primary/10' },
     { amount: '₹500', desc: 'Temple oil for 1 week', color: 'bg-accent/10' },
-    { amount: '₹1,000', desc: 'Special puja materials', color: 'bg-gold/10' },
-    { amount: '₹5,000', desc: 'Festival celebration', color: 'bg-lotus/10' },
+    { amount: '₹1,000', desc: 'Special puja materials', color: 'bg-primary/5' },
+    { amount: '₹5,000', desc: 'Festival celebration', color: 'bg-accent/5' },
   ];
 
   return (
@@ -75,17 +88,16 @@ const Donations = () => {
         </div>
 
         <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-8">
-          {/* Form */}
           <div className={`glass-card p-6 md:p-8 ${!user ? 'opacity-50 pointer-events-none' : ''}`}>
             <h2 className="text-xl font-display font-semibold mb-6">Donation Details</h2>
             <form onSubmit={handleDonation} className="space-y-6">
               <div>
                 <Label className="text-sm font-medium mb-3 block">Select Amount (₹)</Label>
                 <RadioGroup value={donationData.amount} onValueChange={(v) => setDonationData({ ...donationData, amount: v })} className="grid grid-cols-3 gap-2">
-                  {predefinedAmounts.map(a => (
+                  {predefinedAmounts.map((a) => (
                     <div key={a} className="relative">
-                      <RadioGroupItem value={a} id={a} className="peer sr-only" />
-                      <Label htmlFor={a} className="flex items-center justify-center p-3 glass rounded-xl cursor-pointer text-sm font-medium peer-data-[state=checked]:gradient-devotional peer-data-[state=checked]:text-white transition-all duration-300">
+                      <RadioGroupItem value={a} id={`amt-${a}`} className="peer sr-only" />
+                      <Label htmlFor={`amt-${a}`} className="flex items-center justify-center p-3 glass rounded-xl cursor-pointer text-sm font-medium peer-data-[state=checked]:gradient-devotional peer-data-[state=checked]:text-white transition-all duration-300">
                         {a === 'Other' ? 'Other' : `₹${a}`}
                       </Label>
                     </div>
@@ -98,19 +110,13 @@ const Donations = () => {
               <div>
                 <Label className="text-sm font-medium mb-3 block">Purpose</Label>
                 <RadioGroup value={donationData.purpose} onValueChange={(v) => setDonationData({ ...donationData, purpose: v })} className="space-y-2">
-                  {donationPurposes.map(p => (
+                  {donationPurposes.map((p) => (
                     <div key={p.value} className="flex items-center space-x-3 glass rounded-xl p-3">
-                      <RadioGroupItem value={p.value} id={p.value} />
-                      <Label htmlFor={p.value} className="text-sm cursor-pointer">{p.label}</Label>
+                      <RadioGroupItem value={p.value} id={`purpose-${p.value}`} />
+                      <Label htmlFor={`purpose-${p.value}`} className="text-sm cursor-pointer">{p.label}</Label>
                     </div>
                   ))}
                 </RadioGroup>
-              </div>
-              <div className="space-y-3">
-                <h3 className="font-display font-medium">Donor Information</h3>
-                <div><Label>Full Name</Label><Input value={donationData.donorName} onChange={(e) => setDonationData({ ...donationData, donorName: e.target.value })} className="rounded-xl" required /></div>
-                <div><Label>Email</Label><Input type="email" value={donationData.email} onChange={(e) => setDonationData({ ...donationData, email: e.target.value })} className="rounded-xl" required /></div>
-                <div><Label>Phone</Label><Input type="tel" value={donationData.phone} onChange={(e) => setDonationData({ ...donationData, phone: e.target.value })} className="rounded-xl" required /></div>
               </div>
               <Button type="submit" disabled={!user || !donationData.amount || paymentLoading} className="w-full gradient-devotional text-white border-0 rounded-xl py-5 text-lg shadow-lg">
                 <CreditCard className="w-5 h-5 mr-2" />
@@ -119,7 +125,6 @@ const Donations = () => {
             </form>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
             <div className="glass-card p-6">
               <h3 className="font-display font-semibold mb-5">Your Impact</h3>
@@ -135,8 +140,8 @@ const Donations = () => {
             <div className="glass-card p-6">
               <h3 className="font-display font-semibold mb-4">Payment Security</h3>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
-                {['Secure payment gateway', '256-bit SSL encryption', 'Tax-exempt donation receipt', '80G tax benefit available', 'Transparent fund utilization'].map((t, i) => (
-                  <li key={i} className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary" /> {t}</li>
+                {['Powered by Stripe – secure payment gateway', '256-bit SSL encryption', 'Tax-exempt donation receipt', '80G tax benefit available', 'Transparent fund utilization'].map((text, i) => (
+                  <li key={i} className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary" /> {text}</li>
                 ))}
               </ul>
             </div>

@@ -1,204 +1,155 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { MessageCircle, Send, Minimize2, X, Bot, User, Loader2, Settings, ArrowLeft } from 'lucide-react';
+import { MessageCircle, Send, Minimize2, X, Bot, User, Loader2, ArrowLeft, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { sendMessageToGemini } from '@/lib/gemini-fallback';
-import { supabase } from '@/integrations/supabase/client';
 import { useLocation } from 'react-router-dom';
-import ApiKeyDialog from '@/components/ApiKeyDialog';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   id: string;
-  text: string;
-  isBot: boolean;
+  role: 'user' | 'assistant';
+  content: string;
   timestamp: Date;
 }
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sribot-chat`;
+
+const suggestedPrompts = [
+  "What events are coming up?",
+  "Show me available services",
+  "How can I make a donation?",
+  "Tell me about the temple history",
+];
+
+const detectLanguage = (text: string): string => {
+  if (/[\u0900-\u097F]/.test(text)) return 'hi';
+  if (/[\u0C00-\u0C7F]/.test(text)) return 'te';
+  if (/[\u0B80-\u0BFF]/.test(text)) return 'ta';
+  if (/[\u0C80-\u0CFF]/.test(text)) return 'kn';
+  return 'en';
+};
 
 const Sribot = () => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: '🙏 Namaste! I am Sribot, your divine assistant at Sri Balaji Temple. How may I help you today? You can ask me about temple services, upcoming events, donation information, or any spiritual guidance you need.',
-      isBot: true,
-      timestamp: new Date()
-    }
+      role: 'assistant',
+      content: '🙏 **Namaste!** I am Sribot, your divine assistant at Sree Balaji Mandir.\n\nI can help you with:\n- 🎉 **Upcoming events** & festivals\n- 🪔 **Temple services** & bookings\n- 💝 **Donations** & contributions\n- 📖 **Temple history** & guidance\n\nHow may I serve you today?',
+      timestamp: new Date(),
+    },
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [realTimeData, setRealTimeData] = useState<any>({
-    events: [],
-    services: [],
-    lastUpdated: null
-  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Hide Sribot on authentication and landing pages
   const hiddenRoutes = ['/auth', '/landing'];
   const shouldHide = hiddenRoutes.includes(location.pathname);
-
-  // Check if mobile device
-  const isMobile = window.innerWidth <= 768;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   useEffect(() => {
-    if (isOpen && !isMinimized) {
-      inputRef.current?.focus();
-    }
+    if (isOpen && !isMinimized) inputRef.current?.focus();
   }, [isOpen, isMinimized]);
 
-  // Fetch real-time data every 30 seconds
-  useEffect(() => {
-    const fetchRealTimeData = async () => {
-      try {
-        const [eventsResponse, servicesResponse] = await Promise.all([
-          supabase.from('events').select('*').order('date', { ascending: true }).limit(10),
-          supabase.from('services').select('*').order('created_at', { ascending: false }).limit(10)
-        ]);
+  const streamChat = async (allMessages: Message[]) => {
+    const lang = allMessages.length > 1 ? detectLanguage(allMessages[allMessages.length - 1].content) : 'en';
 
-        setRealTimeData({
-          events: eventsResponse.data || [],
-          services: servicesResponse.data || [],
-          lastUpdated: new Date()
-        });
-      } catch (error) {
-        console.error('Error fetching real-time data:', error);
+    const resp = await fetch(CHAT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({
+        messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
+        language: lang,
+      }),
+    });
+
+    if (!resp.ok || !resp.body) {
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData.error || `Error ${resp.status}`);
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let textBuffer = '';
+    let assistantContent = '';
+
+    const updateAssistant = (content: string) => {
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === 'assistant' && last.id === 'streaming') {
+          return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content } : m));
+        }
+        return [...prev, { id: 'streaming', role: 'assistant', content, timestamp: new Date() }];
+      });
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      textBuffer += decoder.decode(value, { stream: true });
+
+      let newlineIndex: number;
+      while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+        let line = textBuffer.slice(0, newlineIndex);
+        textBuffer = textBuffer.slice(newlineIndex + 1);
+        if (line.endsWith('\r')) line = line.slice(0, -1);
+        if (!line.startsWith('data: ')) continue;
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === '[DONE]') break;
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const delta = parsed.choices?.[0]?.delta?.content;
+          if (delta) {
+            assistantContent += delta;
+            updateAssistant(assistantContent);
+          }
+        } catch {
+          textBuffer = line + '\n' + textBuffer;
+          break;
+        }
       }
-    };
+    }
 
-    fetchRealTimeData();
-    const interval = setInterval(fetchRealTimeData, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Finalize the message with a real ID
+    setMessages((prev) =>
+      prev.map((m) => (m.id === 'streaming' ? { ...m, id: Date.now().toString() } : m))
+    );
   };
 
-  const enhanceMessageWithRealTimeData = (message: string) => {
-    const currentEvents = realTimeData.events
-      .filter((event: any) => new Date(event.date) >= new Date())
-      .slice(0, 5);
-    
-    const availableServices = realTimeData.services.slice(0, 8);
+  const sendMessage = async (text?: string) => {
+    const msg = (text || inputMessage).trim();
+    if (!msg || isLoading) return;
 
-    const contextData = `
-    Current Real-Time Temple Information (Last Updated: ${realTimeData.lastUpdated?.toLocaleTimeString()}):
-
-    UPCOMING EVENTS:
-    ${currentEvents.map((event: any) => 
-      `- ${event.name}: ${new Date(event.date).toLocaleDateString()} at ${event.time} (Location: ${event.location})`
-    ).join('\n')}
-
-    AVAILABLE SERVICES:
-    ${availableServices.map((service: any) => 
-      `- ${service.name}: ₹${service.price} ${service.description ? `(${service.description})` : ''}`
-    ).join('\n')}
-
-    User Question: ${message}
-    
-    Please provide specific, accurate information based on the real-time data above. If asked about events or services, use the exact information provided.
-    `;
-
-    return contextData;
-  };
-
-  const sendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: inputMessage.trim(),
-      isBot: false,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: msg, timestamp: new Date() };
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInputMessage('');
     setIsLoading(true);
 
     try {
-      // Detect language and enhance message
-      const detectedLanguage = detectLanguage(inputMessage.trim());
-      const enhancedMessage = enhanceMessageWithRealTimeData(getMultilingualPrompt(inputMessage.trim(), detectedLanguage));
-      
-      // Try Supabase function first
-      let botResponse: string;
-      try {
-        const { data, error } = await supabase.functions.invoke('sribot-chat', {
-          body: { 
-            message: enhancedMessage,
-            language: detectedLanguage 
-          }
-        });
-
-        if (error) throw error;
-        botResponse = data.response;
-      } catch (supabaseError) {
-        console.log('Supabase failed, using Gemini fallback:', supabaseError);
-        botResponse = await sendMessageToGemini(enhancedMessage);
-      }
-
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: botResponse,
-        isBot: true,
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: '🙏 I apologize for the technical difficulty. Please try again or contact our temple directly for assistance.',
-        isBot: true,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-      
-      toast({
-        title: "Connection Issue",
-        description: "Unable to connect to Sribot. Please try again.",
-        variant: "destructive",
-      });
+      await streamChat(updatedMessages);
+    } catch (error: any) {
+      console.error('Sribot error:', error);
+      setMessages((prev) => [
+        ...prev,
+        { id: (Date.now() + 1).toString(), role: 'assistant', content: '🙏 I apologize for the difficulty. Please try again.', timestamp: new Date() },
+      ]);
+      toast({ title: 'Connection Issue', description: error.message, variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Language detection function
-  const detectLanguage = (text: string): string => {
-    // Simple language detection based on script
-    if (/[\u0900-\u097F]/.test(text)) return 'hi'; // Devanagari
-    if (/[\u0C00-\u0C7F]/.test(text)) return 'te'; // Telugu
-    if (/[\u0B80-\u0BFF]/.test(text)) return 'ta'; // Tamil
-    if (/[\u0C80-\u0CFF]/.test(text)) return 'kn'; // Kannada
-    
-    // Check for common words
-    const hindiWords = ['नमस्ते', 'धन्यवाद', 'कैसे', 'क्या', 'मंदिर', 'पूजा'];
-    const teluguWords = ['నమస్తే', 'ధన్యవాదములు', 'ఎలా', 'ఏమి', 'దేవాలయం', 'పూజ'];
-    const tamilWords = ['வணக்கம்', 'நன்றி', 'எப்படி', 'என்ன', 'கோவில்', 'பூஜை'];
-    const kannadaWords = ['ನಮಸ್ಕಾರ', 'ಧನ್ಯವಾದ', 'ಹೇಗೆ', 'ಏನು', 'ದೇವಾಲಯ', 'ಪೂಜೆ'];
-    
-    if (hindiWords.some(word => text.includes(word))) return 'hi';
-    if (teluguWords.some(word => text.includes(word))) return 'te';
-    if (tamilWords.some(word => text.includes(word))) return 'ta';
-    if (kannadaWords.some(word => text.includes(word))) return 'kn';
-    
-    return 'en'; // Default to English
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -208,293 +159,164 @@ const Sribot = () => {
     }
   };
 
-  if (shouldHide) {
-    return null;
-  }
+  if (shouldHide) return null;
+
+  const MessageBubble = ({ message }: { message: Message }) => (
+    <div className={`flex gap-2.5 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+      {message.role === 'assistant' && (
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0 shadow-md">
+          <Bot className="w-4 h-4 text-white" />
+        </div>
+      )}
+      <div
+        className={`max-w-[80%] p-3 rounded-2xl shadow-sm ${
+          message.role === 'assistant'
+            ? 'bg-card border border-border text-foreground'
+            : 'bg-primary text-primary-foreground'
+        }`}
+      >
+        {message.role === 'assistant' ? (
+          <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-1.5 [&>ul]:mb-1.5 [&>ol]:mb-1.5 [&>p:last-child]:mb-0">
+            <ReactMarkdown>{message.content}</ReactMarkdown>
+          </div>
+        ) : (
+          <p className="text-sm leading-relaxed">{message.content}</p>
+        )}
+        <p className={`text-[10px] mt-1.5 opacity-60`}>
+          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </p>
+      </div>
+      {message.role === 'user' && (
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-secondary to-muted flex items-center justify-center flex-shrink-0 shadow-md">
+          <User className="w-4 h-4 text-foreground" />
+        </div>
+      )}
+    </div>
+  );
+
+  const ChatBody = ({ fullHeight }: { fullHeight?: boolean }) => (
+    <div className={`flex flex-col ${fullHeight ? 'flex-1' : 'h-[420px]'}`}>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-background to-muted/30">
+        {messages.map((m) => (
+          <MessageBubble key={m.id} message={m} />
+        ))}
+        {isLoading && messages[messages.length - 1]?.role === 'user' && (
+          <div className="flex gap-2.5 justify-start">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0">
+              <Bot className="w-4 h-4 text-white" />
+            </div>
+            <div className="bg-card border border-border p-3 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                <span className="text-xs text-muted-foreground">Thinking...</span>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Suggested prompts for first message */}
+        {messages.length === 1 && !isLoading && (
+          <div className="flex flex-wrap gap-2 pt-2">
+            {suggestedPrompts.map((prompt) => (
+              <button
+                key={prompt}
+                onClick={() => sendMessage(prompt)}
+                className="text-xs px-3 py-1.5 rounded-full border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+      <div className="p-3 border-t bg-background/95 backdrop-blur-sm">
+        <div className="flex gap-2">
+          <Input
+            ref={inputRef}
+            placeholder="Ask about services, events, donations..."
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyDown={handleKeyPress}
+            disabled={isLoading}
+            className="flex-1 rounded-full border-border"
+          />
+          <Button
+            onClick={() => sendMessage()}
+            disabled={isLoading || !inputMessage.trim()}
+            size="icon"
+            className="rounded-full bg-primary hover:bg-primary/90 h-10 w-10"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
+          🙏 Powered by AI • Live temple data
+        </p>
+      </div>
+    </div>
+  );
+
+  const Header = ({ onClose, showMinimize }: { onClose: () => void; showMinimize?: boolean }) => (
+    <div className="bg-gradient-to-r from-primary to-accent text-white p-3 flex items-center justify-between rounded-t-2xl">
+      <div className="flex items-center gap-2.5">
+        {isMobile && (
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/20 h-8 w-8">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        )}
+        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+          <Sparkles className="w-4 h-4" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-sm leading-tight">Sribot</h3>
+          <p className="text-[10px] opacity-80">Temple AI Assistant</p>
+        </div>
+      </div>
+      <div className="flex gap-1">
+        {showMinimize && (
+          <Button variant="ghost" size="icon" onClick={() => setIsMinimized(!isMinimized)} className="text-white hover:bg-white/20 h-7 w-7">
+            <Minimize2 className="w-3.5 h-3.5" />
+          </Button>
+        )}
+        {!isMobile && (
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/20 h-7 w-7">
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <>
-      {/* Chat Button */}
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-16 h-16 rounded-full temple-gradient text-white shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 z-50 animate-pulse"
-          style={{
-            background: 'linear-gradient(135deg, #ff6b35, #f7931e)',
-            boxShadow: '0 10px 30px rgba(255, 107, 53, 0.4)'
-          }}
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-xl hover:shadow-2xl hover:scale-110 transition-all duration-300 z-50"
         >
-          <MessageCircle className="w-8 h-8" />
+          <MessageCircle className="w-6 h-6" />
         </Button>
       )}
 
-      {/* Chat Window - Mobile Full Screen */}
       {isOpen && isMobile && (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col">
-          {/* Header */}
-          <div className="temple-gradient text-white p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsOpen(false)}
-                className="text-white hover:bg-white/20 w-10 h-10 p-0"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                  <Bot className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Sribot</h3>
-                  <p className="text-xs opacity-75">Temple Assistant</p>
-                </div>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowApiKeyDialog(true)}
-              className="text-white hover:bg-white/20 w-8 h-8 p-0"
-            >
-              <Settings className="w-4 h-4" />
-            </Button>
-          </div>
-          
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-br from-orange-50 to-yellow-50">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-3 ${message.isBot ? 'justify-start' : 'justify-end'}`}
-              >
-                {message.isBot && (
-                  <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                    <Bot className="w-4 h-4 text-white" />
-                  </div>
-                )}
-                <div
-                  className={`max-w-[75%] p-3 rounded-2xl shadow-md ${
-                    message.isBot
-                      ? 'bg-white border border-orange-100 text-gray-800'
-                      : 'bg-gradient-to-br from-orange-500 to-red-500 text-white'
-                  }`}
-                >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
-                  <p className={`text-xs mt-2 opacity-70 ${message.isBot ? 'text-gray-500' : 'text-orange-100'}`}>
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-                {!message.isBot && (
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                    <User className="w-4 h-4 text-white" />
-                  </div>
-                )}
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex gap-3 justify-start">
-                <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Bot className="w-4 h-4 text-white" />
-                </div>
-                <div className="bg-white border border-orange-100 p-3 rounded-2xl shadow-md">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
-                    <span className="text-sm text-gray-600">Sribot is thinking...</span>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input - Floating curved box */}
-          <div className="p-4 bg-white/95 backdrop-blur-sm">
-            <div className="bg-white rounded-full shadow-lg p-2 border border-orange-200">
-              <div className="flex gap-2 items-center">
-                <Input
-                  ref={inputRef}
-                  placeholder="Ask me about temple services, events, or guidance..."
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  disabled={isLoading}
-                  className="flex-1 border-0 focus:ring-0 focus:border-0 bg-transparent"
-                />
-                <Button
-                  onClick={sendMessage}
-                  disabled={isLoading || !inputMessage.trim()}
-                  className="temple-gradient text-white hover:shadow-lg transition-all duration-200 rounded-full w-12 h-12 p-0"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-2 text-center">
-              🙏 Powered by divine AI • Real-time temple data
-            </p>
-          </div>
+        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+          <Header onClose={() => setIsOpen(false)} />
+          <ChatBody fullHeight />
         </div>
       )}
 
-      {/* Chat Window - Desktop */}
       {isOpen && !isMobile && (
-        <Card className={`fixed bottom-6 right-6 w-96 transition-all duration-300 z-50 shadow-2xl border-2 border-orange-200/50 ${
-          isMinimized ? 'h-16' : 'h-[500px]'
-        }`}>
-          <CardHeader className="temple-gradient text-white p-4 rounded-t-lg">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                  <Bot className="w-5 h-5" />
-                </div>
-                Sribot - Temple Assistant
-                {realTimeData.lastUpdated && (
-                  <span className="text-xs opacity-75">
-                    (Live Data)
-                  </span>
-                )}
-              </CardTitle>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowApiKeyDialog(true)}
-                  className="text-white hover:bg-white/20 w-8 h-8 p-0"
-                >
-                  <Settings className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsMinimized(!isMinimized)}
-                  className="text-white hover:bg-white/20 w-8 h-8 p-0"
-                >
-                  <Minimize2 className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsOpen(false)}
-                  className="text-white hover:bg-white/20 w-8 h-8 p-0"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          
-          {!isMinimized && (
-            <CardContent className="p-0 flex flex-col h-[436px]">
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-br from-orange-50 to-yellow-50">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-3 ${message.isBot ? 'justify-start' : 'justify-end'}`}
-                  >
-                    {message.isBot && (
-                      <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                        <Bot className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                    <div
-                      className={`max-w-[280px] p-3 rounded-2xl shadow-md ${
-                        message.isBot
-                          ? 'bg-white border border-orange-100 text-gray-800'
-                          : 'bg-gradient-to-br from-orange-500 to-red-500 text-white'
-                      }`}
-                    >
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
-                      <p className={`text-xs mt-2 opacity-70 ${message.isBot ? 'text-gray-500' : 'text-orange-100'}`}>
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                    {!message.isBot && (
-                      <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                        <User className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {isLoading && (
-                  <div className="flex gap-3 justify-start">
-                    <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                      <Bot className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="bg-white border border-orange-100 p-3 rounded-2xl shadow-md">
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
-                        <span className="text-sm text-gray-600">Sribot is thinking...</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Input */}
-              <div className="p-4 border-t bg-white">
-                <div className="flex gap-2">
-                  <Input
-                    ref={inputRef}
-                    placeholder="Ask me about temple services, events, or guidance..."
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    disabled={isLoading}
-                    className="flex-1 border border-orange-200 focus:border-orange-400 focus:ring-orange-200"
-                  />
-                  <Button
-                    onClick={sendMessage}
-                    disabled={isLoading || !inputMessage.trim()}
-                    className="temple-gradient text-white hover:shadow-lg transition-all duration-200 px-4"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  🙏 Powered by divine AI • Real-time temple data
-                </p>
-              </div>
-            </CardContent>
-          )}
-        </Card>
+        <div className={`fixed bottom-6 right-6 w-[380px] z-50 rounded-2xl shadow-2xl border border-border overflow-hidden bg-background transition-all duration-300 ${isMinimized ? 'h-[52px]' : 'h-[500px]'}`}>
+          <Header onClose={() => setIsOpen(false)} showMinimize />
+          {!isMinimized && <ChatBody />}
+        </div>
       )}
-
-      <ApiKeyDialog 
-        isOpen={showApiKeyDialog} 
-        onClose={() => setShowApiKeyDialog(false)} 
-      />
     </>
   );
 };
-
-// Enhanced multilingual capabilities
-const getMultilingualPrompt = (message: string, language: string = 'en') => {
-  const languageInstructions = {
-    en: "Respond in English with occasional Sanskrit mantras",
-    hi: "हिंदी में उत्तर दें और संस्कृत मंत्रों का उपयोग करें",
-    te: "తెలుగులో సమాధానం ఇవ్వండి మరియు సంస్కృత మంత్రాలను ఉపయోగించండి",
-    ta: "தமிழில் பதிலளிக்கவும் மற்றும் சமஸ்கிருத மந்திரங்களைப் பயன்படுத்தவும்",
-    kn: "ಕನ್ನಡದಲ್ಲಿ ಉತ್ತರಿಸಿ ಮತ್ತು ಸಂಸ್ಕೃತ ಮಂತ್ರಗಳನ್ನು ಬಳಸಿ"
-  };
-
-  const instruction = languageInstructions[language as keyof typeof languageInstructions] || languageInstructions.en;
-  return `${instruction}. User message: ${message}`;
-};
-
-// Helper function for multilingual welcome messages
-function getWelcomeMessage(lang: string): string {
-  const messages = {
-    en: "🙏 Namaste! I'm Sribot, your spiritual guide for Sri Balaji Temple. I can help you in multiple languages - English, Hindi, Telugu, Tamil, and Kannada. How can I assist you with temple services, events, or spiritual guidance today?",
-    hi: "🙏 नमस्ते! मैं श्रीबॉट हूं, श्री बालाजी मंदिर का आपका आध्यात्मिक मार्गदर्शक। मैं कई भाषाओं में सहायता कर सकता हूं। मैं आज मंदिर सेवाओं, कार्यक्रमों या आध्यात्मिक मार्गदर्शन में आपकी कैसे सहायता कर सकता हूं?",
-    te: "🙏 నమస్తే! నేను శ్రీబాట్, శ్రీ బాలాజీ దేవాలయానికి మీ ఆధ్యాత్మిక మార్గదర్శకుడిని। నేను అనేక భాషల్లో సహాయం చేయగలను। దేవాలయ సేవలు, కార్యక్రమాలు లేదా ఆధ్యాత్మిక మార్గదర్శనంలో నేను ఈరోజు మీకు ఎలా సహాయం చేయగలను?",
-    ta: "🙏 வணக்கம்! நான் ஸ்ரீபாட், ஸ்ரீ பாலாஜி கோவிலுக்கான உங்கள் ஆன்மிக வழிகாட்டி. நான் பல மொழிகளில் உதவ முடியும். கோவில் சேவைகள், நிகழ்வுகள் அல்லது ஆன்மிக வழிகாட்டுதலில் இன்று நான் உங்களுக்கு எப்படி உதவ முடியும்?",
-    kn: "🙏 ನಮಸ್ಕಾರ! ನಾನು ಶ್ರೀಬಾಟ್, ಶ್ರೀ ಬಾಲಾಜಿ ದೇವಾಲಯಕ್ಕೆ ನಿಮ್ಮ ಆಧ್ಯಾತ್ಮಿಕ ಮಾರ್ಗದರ್ಶಿ. ನಾನು ಅನೇಕ ಭಾಷೆಗಳಲ್ಲಿ ಸಹಾಯ ಮಾಡಬಹುದು. ದೇವಾಲಯ ಸೇವೆಗಳು, ಕಾರ್ಯಕ್ರಮಗಳು ಅಥವಾ ಆಧ್ಯಾತ್ಮಿಕ ಮಾರ್ಗದರ್ಶನದಲ್ಲಿ ನಾನು ಇಂದು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?"
-  };
-  return messages[lang as keyof typeof messages] || messages.en;
-}
 
 export default Sribot;

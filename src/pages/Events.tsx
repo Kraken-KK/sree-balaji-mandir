@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Clock, Users, MapPin, Sparkles } from 'lucide-react';
+import { Calendar, Clock, Users, MapPin, Sparkles, CreditCard, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { sendNotificationEmail } from '@/lib/email-service';
 
@@ -23,13 +25,27 @@ interface EventType {
   updated_at: string;
 }
 
+interface ServiceType {
+  id: string;
+  name: string;
+  price: number;
+  description: string | null;
+  duration: string | null;
+  category: string | null;
+}
+
 const Events = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [registrationData, setRegistrationData] = useState({ fullName: '', email: '', phone: '', members: 1 });
   const [events, setEvents] = useState<EventType[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
+  const [showUpsell, setShowUpsell] = useState(false);
+  const [upsellServices, setUpsellServices] = useState<ServiceType[]>([]);
+  const [registeredEventName, setRegisteredEventName] = useState('');
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -42,14 +58,47 @@ const Events = () => {
     fetchEvents();
   }, [toast]);
 
+  const fetchLinkedServices = async (eventId: string) => {
+    // Try linked services first, fall back to all services
+    const { data: linked } = await supabase
+      .from('event_services')
+      .select('service_id')
+      .eq('event_id', eventId);
+
+    if (linked && linked.length > 0) {
+      const serviceIds = linked.map((l: any) => l.service_id);
+      const { data: services } = await supabase
+        .from('services')
+        .select('*')
+        .in('id', serviceIds);
+      return services || [];
+    }
+
+    // Fallback: show all services
+    const { data: allServices } = await supabase
+      .from('services')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(4);
+    return allServices || [];
+  };
+
   const handleRegistration = async (e: React.FormEvent, event: EventType) => {
     e.preventDefault();
     await sendNotificationEmail(registrationData.email, registrationData.fullName, 'event_registration', {
-      eventName: event.name, eventDate: event.date, registrationMembers: registrationData.members
+      eventName: event.name, eventDate: event.date, registrationMembers: registrationData.members,
     });
     toast({ title: t('registrationSuccess'), description: 'Check your email for confirmation.' });
     setRegistrationData({ fullName: '', email: '', phone: '', members: 1 });
     setOpenDialogId(null);
+
+    // Show upsell popup
+    setRegisteredEventName(event.name);
+    const services = await fetchLinkedServices(event.id);
+    if (services.length > 0) {
+      setUpsellServices(services);
+      setShowUpsell(true);
+    }
   };
 
   return (
@@ -61,9 +110,7 @@ const Events = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-5">
             <Calendar className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-display font-bold mb-4 text-gradient-devotional">
-            {t('eventsTitle')}
-          </h1>
+          <h1 className="text-4xl md:text-5xl font-display font-bold mb-4 text-gradient-devotional">{t('eventsTitle')}</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Join us in our spiritual journey through festivals, rituals, and sacred celebrations
           </p>
@@ -71,9 +118,7 @@ const Events = () => {
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="glass-card h-[420px] loading-shimmer" />
-            ))}
+            {[1, 2, 3].map((i) => <div key={i} className="glass-card h-[420px] loading-shimmer" />)}
           </div>
         ) : events.length === 0 ? (
           <div className="text-center py-20 animate-fade-in">
@@ -105,21 +150,20 @@ const Events = () => {
                 <div className="p-5">
                   <div className="space-y-2 mb-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2"><MapPin className="w-4 h-4" /> {event.location}</div>
-                    {event.participants && <div className="flex items-center gap-2"><Users className="w-4 h-4" /> {event.participants} expected</div>}
+                    {event.participants != null && event.participants > 0 && <div className="flex items-center gap-2"><Users className="w-4 h-4" /> {event.participants} expected</div>}
                   </div>
                   {event.description && <p className="text-sm text-muted-foreground mb-5 line-clamp-2">{event.description}</p>}
-                  
+
                   <Dialog open={openDialogId === event.id} onOpenChange={(open) => setOpenDialogId(open ? event.id : null)}>
                     <DialogTrigger asChild>
-                      <Button className="w-full gradient-devotional text-white border-0 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
-                        {t('register')}
-                      </Button>
+                      <Button className="w-full gradient-devotional text-white border-0 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">{t('register')}</Button>
                     </DialogTrigger>
                     <DialogContent className="glass rounded-3xl border-0">
                       <DialogHeader>
                         <DialogTitle className="font-display flex items-center gap-2">
                           <Calendar className="w-5 h-5 text-primary" /> Register for {event.name}
                         </DialogTitle>
+                        <DialogDescription>Fill in your details to register for this event.</DialogDescription>
                       </DialogHeader>
                       <form onSubmit={(e) => handleRegistration(e, event)} className="space-y-4">
                         {[
@@ -146,6 +190,49 @@ const Events = () => {
           </div>
         )}
       </div>
+
+      {/* Upsell Dialog */}
+      <Dialog open={showUpsell} onOpenChange={setShowUpsell}>
+        <DialogContent className="glass rounded-3xl border-0 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" /> Registration Successful! 🎉
+            </DialogTitle>
+            <DialogDescription>
+              You've registered for <strong>{registeredEventName}</strong>. Would you like to enhance your experience?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <p className="text-sm font-medium text-foreground">Recommended Services</p>
+            {upsellServices.map((service) => (
+              <div key={service.id} className="glass rounded-xl p-4 flex items-center justify-between group hover:shadow-md transition-all">
+                <div>
+                  <h4 className="font-semibold text-sm">{service.name}</h4>
+                  {service.description && <p className="text-xs text-muted-foreground mt-0.5">{service.description}</p>}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-bold text-primary">₹{Number(service.price).toLocaleString()}</span>
+                  <Button
+                    size="sm"
+                    onClick={() => { setShowUpsell(false); navigate('/services'); }}
+                    className="rounded-lg gradient-devotional text-white border-0"
+                  >
+                    Book <ArrowRight className="w-3 h-3 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" onClick={() => { setShowUpsell(false); navigate('/donations'); }} className="flex-1 rounded-xl">
+                <CreditCard className="w-4 h-4 mr-2" /> Make a Donation
+              </Button>
+              <Button variant="ghost" onClick={() => setShowUpsell(false)} className="flex-1 rounded-xl">
+                Maybe Later
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
