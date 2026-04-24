@@ -25,6 +25,9 @@ serve(async (req) => {
 
     const { ticketNumber, reason } = await req.json();
     if (!ticketNumber) throw new Error("Ticket number required");
+    if (!reason || typeof reason !== 'string' || reason.trim().length < 10) {
+      throw new Error("A cancellation reason of at least 10 characters is required");
+    }
 
     const admin = createClient(supabaseUrl, service, { auth: { persistSession: false } });
 
