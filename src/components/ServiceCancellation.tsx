@@ -77,8 +77,9 @@ const ServiceCancellation = () => {
             <Input id="ticket-number" value={ticketNumber} onChange={(e) => setTicketNumber(e.target.value)} placeholder="e.g., TKT2025123456" className="mt-1" />
           </div>
           <div>
-            <Label htmlFor="reason">Reason (Optional)</Label>
-            <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why are you cancelling?" className="mt-1" rows={3} />
+            <Label htmlFor="reason">Reason for cancellation <span className="text-destructive">*</span></Label>
+            <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Please tell us why you are cancelling (min 10 characters)" className="mt-1" rows={3} />
+            <p className="text-xs text-muted-foreground mt-1">{reason.trim().length}/10 minimum characters</p>
           </div>
           <Button onClick={handleCancellation} disabled={isLoading} className="w-full" variant="destructive">
             {isLoading ? 'Processing...' : 'Cancel Service'}
