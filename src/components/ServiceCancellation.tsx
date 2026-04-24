@@ -20,10 +20,18 @@ const ServiceCancellation = () => {
       toast({ title: 'Error', description: 'Please enter your ticket number', variant: 'destructive' });
       return;
     }
+    if (!reason.trim() || reason.trim().length < 10) {
+      toast({
+        title: 'Reason required',
+        description: 'Please tell us why you are cancelling (at least 10 characters). This helps us improve.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('cancel-service', {
-        body: { ticketNumber: ticketNumber.trim(), reason: reason.trim() || null },
+        body: { ticketNumber: ticketNumber.trim(), reason: reason.trim() },
       });
       if (error) throw new Error(error.message || 'Cancellation failed');
       if ((data as any)?.error) throw new Error((data as any).error);
@@ -31,7 +39,7 @@ const ServiceCancellation = () => {
       const { refundAmount, refundStatus } = data as { refundAmount: number; refundStatus: string };
       toast({
         title: '✓ Service Cancelled',
-        description: `${refundStatus}${refundAmount > 0 ? ` — ₹${refundAmount.toLocaleString('en-IN')}` : ''}. Confirmation email sent.`,
+        description: `${refundStatus}${refundAmount > 0 ? ` — ₹${refundAmount.toLocaleString('en-IN')}` : ''}. You'll receive a confirmation and a follow-up email shortly.`,
       });
       setTicketNumber('');
       setReason('');
@@ -69,8 +77,9 @@ const ServiceCancellation = () => {
             <Input id="ticket-number" value={ticketNumber} onChange={(e) => setTicketNumber(e.target.value)} placeholder="e.g., TKT2025123456" className="mt-1" />
           </div>
           <div>
-            <Label htmlFor="reason">Reason (Optional)</Label>
-            <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why are you cancelling?" className="mt-1" rows={3} />
+            <Label htmlFor="reason">Reason for cancellation <span className="text-destructive">*</span></Label>
+            <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Please tell us why you are cancelling (min 10 characters)" className="mt-1" rows={3} />
+            <p className="text-xs text-muted-foreground mt-1">{reason.trim().length}/10 minimum characters</p>
           </div>
           <Button onClick={handleCancellation} disabled={isLoading} className="w-full" variant="destructive">
             {isLoading ? 'Processing...' : 'Cancel Service'}
