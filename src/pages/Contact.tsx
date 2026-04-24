@@ -27,7 +27,7 @@ const Contact = () => {
       // Send contact form email to admin
       const { error } = await supabase.functions.invoke('send-notification-email', {
         body: {
-          to: ['krakenkk54@gmail.com'],
+          to: ['karthikeya.ramarapu@icloud.com'],
           name: 'Temple Admin',
           type: 'contact_form',
           data: {
@@ -84,21 +84,21 @@ const Contact = () => {
                   <Phone className="w-5 h-5 text-orange-600" />
                   <div>
                     <p className="font-semibold">Phone</p>
-                    <p className="text-gray-600">+91 9876543210</p>
+                    <p className="text-gray-600">+91 7780132988</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Mail className="w-5 h-5 text-orange-600" />
                   <div>
                     <p className="font-semibold">Email</p>
-                    <p className="text-gray-600">info@balajitemple.com</p>
+                    <p className="text-gray-600">karthikeya.ramarapu@icloud.com</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <MapPin className="w-5 h-5 text-orange-600" />
                   <div>
                     <p className="font-semibold">Address</p>
-                    <p className="text-gray-600">Sri Balaji Temple, Temple Street, City</p>
+                    <p className="text-gray-600">Behind Kavadiguda petrol pump</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

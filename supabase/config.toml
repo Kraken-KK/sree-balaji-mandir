@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.weekly-newsletter]
 verify_jwt = false
+
+[functions.cancel-service]
+verify_jwt = false
+
+[functions.family-request-action]
+verify_jwt = false
