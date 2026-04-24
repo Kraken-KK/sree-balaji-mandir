@@ -26,7 +26,7 @@ const Navbar = () => {
     authContext = { user: null, signOut: () => {} };
   }
 
-  const { user, signOut } = authContext;
+  const { user, signOut, isFamily } = authContext as any;
   const location = useLocation();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -158,12 +158,14 @@ const Navbar = () => {
             </div>
 
             {user && (
-              <Avatar className="h-8 w-8 ring-2 ring-primary/20">
-                <AvatarImage src={user.user_metadata?.avatar_url} />
-                <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
-                  {(user.user_metadata?.full_name || user.email || 'U')[0].toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <div className={isFamily ? 'rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-orange-500 to-red-500' : ''}>
+                <Avatar className={`h-8 w-8 ${isFamily ? 'ring-2 ring-background' : 'ring-2 ring-primary/20'}`}>
+                  <AvatarImage src={user.user_metadata?.avatar_url} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
+                    {(user.user_metadata?.full_name || user.email || 'U')[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
             )}
 
             {/* Mobile Menu */}

@@ -15,7 +15,7 @@ import { sendNotificationEmail } from '@/lib/email-service';
 
 const Services = () => {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, isFamily } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [services, setServices] = useState<any[]>([]);
@@ -23,6 +23,9 @@ const Services = () => {
   const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<any>(null);
   const [serviceDate, setServiceDate] = useState('');
+
+  const familyDiscount = isFamily ? 0.20 : 0;
+  const priceFor = (price: number) => Math.round(price * (1 - familyDiscount));
 
   useEffect(() => {
     (async () => {
@@ -41,15 +44,16 @@ const Services = () => {
     if (!serviceDate) { toast({ title: 'Date Required', description: 'Please select a date.', variant: 'destructive' }); return; }
     setPaymentLoading(selectedService.id);
     try {
+      const finalPrice = priceFor(Number(selectedService.price));
       const qrData = `TICKET:${selectedService.id}:${user.id}:${Date.now()}`;
       const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-payment', {
-        body: { amount: Number(selectedService.price), currency: 'inr', description: selectedService.name, customerEmail: user.email, customerName: user.user_metadata?.full_name || 'User', type: 'service' }
+        body: { amount: finalPrice, currency: 'inr', description: selectedService.name + (isFamily ? ' (Family 20% off)' : ''), customerEmail: user.email, customerName: user.user_metadata?.full_name || 'User', type: 'service' }
       });
       if (paymentError) throw paymentError;
       const { data: ticketNumberData, error: ticketNumberError } = await supabase.rpc('generate_ticket_number');
       if (ticketNumberError) throw ticketNumberError;
       await supabase.from('tickets').insert({ user_id: user.id, service_id: selectedService.id, customer_name: user.user_metadata?.full_name || user.email?.split('@')[0], customer_email: user.email!, qr_code: qrData, ticket_number: ticketNumberData, service_date: serviceDate }).select().single();
-      await sendNotificationEmail(user.email!, user.user_metadata?.full_name || user.email!.split('@')[0], 'service_booking', { serviceName: selectedService.name, servicePrice: Number(selectedService.price), ticketNumber: ticketNumberData, serviceDate });
+      await sendNotificationEmail(user.email!, user.user_metadata?.full_name || user.email!.split('@')[0], 'service_booking', { serviceName: selectedService.name, servicePrice: finalPrice, ticketNumber: ticketNumberData, serviceDate });
       window.open(paymentData.url, '_blank');
       toast({ title: 'Redirecting to Payment', description: 'Check your email for confirmation.' });
       setServiceDate(''); setSelectedService(null);
@@ -67,6 +71,12 @@ const Services = () => {
           </div>
           <h1 className="text-4xl md:text-5xl font-display font-bold mb-4 text-gradient-devotional">{t('services_title') || 'Temple Services'}</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{t('services_subtitle') || 'Book sacred services and pujas for divine blessings'}</p>
+          {isFamily && (
+            <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30">
+              <Sparkles className="w-4 h-4 text-amber-600" />
+              <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">Family Member · 20% off all services</span>
+            </div>
+          )}
           {!user && (
             <div className="glass-card max-w-sm mx-auto mt-8 p-6 text-center">
               <LogIn className="w-10 h-10 mx-auto mb-3 text-primary" />
@@ -81,11 +91,17 @@ const Services = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">{[1,2,3].map(i => <div key={i} className="glass-card h-72 loading-shimmer" />)}</div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {services.map((service, i) => (
+            {services.map((service, i) => {
+              const orig = Number(service.price);
+              const final = priceFor(orig);
+              return (
               <div key={service.id} className="glass-card p-6 group animate-slide-up" style={{ animationDelay: `${i * 0.1}s` }}>
                 <div className="flex justify-between items-start mb-3">
                   <h3 className="text-xl font-display font-semibold text-foreground">{service.name}</h3>
-                  <Badge className="gradient-saffron text-white border-0 text-base font-bold px-3 py-1">₹{Number(service.price).toLocaleString()}</Badge>
+                  <div className="text-right">
+                    {isFamily && <div className="text-xs text-muted-foreground line-through">₹{orig.toLocaleString()}</div>}
+                    <Badge className="gradient-saffron text-white border-0 text-base font-bold px-3 py-1">₹{final.toLocaleString()}</Badge>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{service.description}</p>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground mb-5">
@@ -95,7 +111,7 @@ const Services = () => {
                 <Dialog open={selectedService?.id === service.id} onOpenChange={(open) => !open && setSelectedService(null)}>
                   <DialogTrigger asChild>
                     <Button onClick={() => setSelectedService(service)} disabled={!user} className="w-full gradient-devotional text-white border-0 rounded-xl shadow-md hover:shadow-lg transition-all">
-                      <CreditCard className="w-4 h-4 mr-2" /> Book – ₹{Number(service.price).toLocaleString()}
+                      <CreditCard className="w-4 h-4 mr-2" /> Book – ₹{final.toLocaleString()}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="glass rounded-3xl border-0">
@@ -104,7 +120,7 @@ const Services = () => {
                       <div><Label>Select Date</Label><Input type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} min={new Date().toISOString().split('T')[0]} className="rounded-xl" /></div>
                       <div className="glass rounded-xl p-4 text-sm space-y-1">
                         <p><strong>Name:</strong> {service.name}</p>
-                        <p><strong>Price:</strong> ₹{Number(service.price).toLocaleString()}</p>
+                        <p><strong>Price:</strong> ₹{final.toLocaleString()} {isFamily && <span className="text-amber-600">(Family 20% off — saved ₹{(orig - final).toLocaleString()})</span>}</p>
                         {service.duration && <p><strong>Duration:</strong> {service.duration}</p>}
                       </div>
                       <Button onClick={handleBookService} disabled={paymentLoading === service.id || !serviceDate} className="w-full gradient-devotional text-white border-0 rounded-xl">
@@ -114,7 +130,7 @@ const Services = () => {
                   </DialogContent>
                 </Dialog>
               </div>
-            ))}
+            );})}
           </div>
         )}
 
