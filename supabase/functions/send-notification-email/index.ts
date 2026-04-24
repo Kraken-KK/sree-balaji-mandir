@@ -9,7 +9,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const FROM = "Sree Balaji Mandir <mail@tatthva.tech>";
+const FROM = "Sree Balaji Mandir <onboarding@resend.dev>";
 const SITE = "https://sree-balaji-mandir.lovable.app";
 const TEMPLE_ADDRESS = "Behind Kavadiguda petrol pump";
 const TEMPLE_PHONE = "+91 7780132988";
