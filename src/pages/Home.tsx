@@ -102,13 +102,14 @@ const Home = () => {
           <div className="flex justify-center gap-8 flex-wrap">
             <div className="flex items-center gap-2">
               <Phone className="w-5 h-5" />
-              <span>+91 9876543210</span>
+              <span>+91 7780132988</span>
             </div>
             <div className="flex items-center gap-2">
               <Mail className="w-5 h-5" />
-              <span>info@balajitemple.com</span>
+              <span>karthikeya.ramarapu@icloud.com</span>
             </div>
           </div>
+          <p className="mt-4 text-white/90 text-sm">📍 Behind Kavadiguda petrol pump</p>
           <Button 
             onClick={() => navigate('/contact')}
             className="mt-8 bg-white text-orange-600 hover:bg-orange-50"

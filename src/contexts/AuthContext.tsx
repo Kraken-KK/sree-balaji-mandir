@@ -10,6 +10,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
+  isFamily: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
@@ -34,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isFamily, setIsFamily] = useState(false);
   const [showSubscriberDialog, setShowSubscriberDialog] = useState(false);
   const [subscriberData, setSubscriberData] = useState<{email: string, name: string}>({email: '', name: ''});
   const { toast } = useToast();
@@ -102,17 +104,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const checkAdminStatus = async (user: User | null) => {
-    if (!user) { setIsAdmin(false); return; }
+    if (!user) { setIsAdmin(false); setIsFamily(false); return; }
     try {
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       const adminEmail = user.email?.toLowerCase();
       setIsAdmin(adminEmail === 'admin@sribalajitemple.org' || profile?.username === 'admin');
+
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+      setIsFamily(!!roles?.some((r: any) => r.role === 'family'));
     } catch {
       setIsAdmin(false);
+      setIsFamily(false);
     }
   };
 
@@ -216,7 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{
-      user, session, loading, isAdmin,
+      user, session, loading, isAdmin, isFamily,
       signIn, signInWithGoogle, signInWithApple, signUp, signOut, updateProfile, checkAdminCode,
     }}>
       {children}

@@ -12,6 +12,7 @@ import { User, Moon, Sun, Globe, Shield, Info, RefreshCw } from 'lucide-react';
 import NotificationSettings from '@/components/NotificationSettings';
 import UserHistorySection from '@/components/UserHistorySection';
 import ServiceCancellation from '@/components/ServiceCancellation';
+import FamilyAccessButton from '@/components/FamilyAccessButton';
 
 const Settings = () => {
   const { user, signOut } = useAuth();
@@ -94,6 +95,9 @@ const Settings = () => {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Family Access */}
+          <FamilyAccessButton />
 
           {/* User History Section */}
           <UserHistorySection />
