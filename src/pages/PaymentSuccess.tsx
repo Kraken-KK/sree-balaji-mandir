@@ -1,11 +1,12 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Download, Home, CreditCard } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { sendNotificationEmail } from '@/lib/email-service';
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
@@ -15,6 +16,29 @@ const PaymentSuccess = () => {
   const type = searchParams.get('type');
   const amount = searchParams.get('amount');
   const description = searchParams.get('description');
+  const emailedRef = useRef(false);
+
+  useEffect(() => {
+    if (emailedRef.current || !user?.email || !amount) return;
+    emailedRef.current = true;
+    const name = user.user_metadata?.full_name || 'Devotee';
+    const amt = Number(amount);
+    if (type === 'donation') {
+      sendNotificationEmail(user.email, name, 'donation_receipt' as any, {
+        donationAmount: amt,
+        purpose: description || 'General Fund',
+      });
+      sendNotificationEmail(user.email, name, 'donation_thankyou' as any, { donationAmount: amt });
+    } else {
+      sendNotificationEmail(user.email, name, 'service_booking' as any, {
+        serviceName: description || 'Service',
+        servicePrice: amt,
+        ticketNumber: sessionId?.slice(-8).toUpperCase() || 'N/A',
+        serviceDate: new Date().toLocaleDateString('en-IN'),
+      });
+    }
+  }, [user, type, amount, description, sessionId]);
+
 
   const generateInvoice = () => {
     const invoiceData = {
