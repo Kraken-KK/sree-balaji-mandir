@@ -58,6 +58,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }, 0);
             
             if (event === 'SIGNED_IN') {
+              // Detect first sign-in (OAuth signup) and send welcome email
+              const u = session.user;
+              const isFirstSignIn = u.created_at && u.last_sign_in_at &&
+                Math.abs(new Date(u.last_sign_in_at).getTime() - new Date(u.created_at).getTime()) < 60000;
+              const welcomeKey = `welcome_sent_${u.id}`;
+              if (isFirstSignIn && !localStorage.getItem(welcomeKey) && u.email) {
+                localStorage.setItem(welcomeKey, '1');
+                setTimeout(() => {
+                  supabase.functions.invoke('send-notification-email', {
+                    body: {
+                      to: u.email,
+                      name: u.user_metadata?.full_name || u.email!.split('@')[0],
+                      type: 'signup',
+                    },
+                  }).catch((e) => console.error('Welcome email failed:', e));
+                }, 500);
+              }
+
               const hasSeenDialog = localStorage.getItem('newsletter_dialog_shown');
               if (!hasSeenDialog) {
                 setTimeout(() => {
