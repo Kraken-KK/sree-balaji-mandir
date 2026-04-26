@@ -97,7 +97,7 @@ Guidelines:
   } catch (error) {
     console.error('sribot-chat error:', error);
     return new Response(JSON.stringify({
-      error: error.message,
+      error: (error as Error).message,
       response: "🙏 Technical difficulty. Please try again."
     }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
