@@ -91,9 +91,9 @@ serve(async (req) => {
     // Cancel ticket
     await admin.from('tickets').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', ticket.id);
 
-    // Fire emails in parallel without blocking the response
-    const emailPromises = Promise.allSettled([
-      admin.functions.invoke('send-notification-email', {
+    // Send confirmation email (immediate)
+    try {
+      await admin.functions.invoke('send-notification-email', {
         body: {
           to: ticket.customer_email,
           name: ticket.customer_name,
@@ -103,11 +103,15 @@ serve(async (req) => {
             ticketNumber: ticket.ticket_number,
             refundAmount,
             refundStatus,
-            reason,
+            reason: reason || null,
           },
         },
-      }),
-      admin.functions.invoke('send-notification-email', {
+      });
+    } catch (e) { console.error('Cancellation email failed:', e); }
+
+    // Send follow-up thank-you / feedback email
+    try {
+      await admin.functions.invoke('send-notification-email', {
         body: {
           to: ticket.customer_email,
           name: ticket.customer_name,
@@ -115,13 +119,11 @@ serve(async (req) => {
           data: {
             serviceName: ticket.services?.name || 'Service',
             ticketNumber: ticket.ticket_number,
-            message: `We're sorry to see you cancel your ${ticket.services?.name || 'service'} booking. Your feedback helps us improve. We hope to serve you again soon. 🙏`,
+            message: `We're sorry to see you cancel your ${ticket.services?.name || 'service'} booking. Your feedback "${reason}" helps us improve. We hope to serve you again soon. 🙏`,
           },
         },
-      }),
-    ]);
-    // Don't await — let it run in background. Use EdgeRuntime.waitUntil if available.
-    try { (globalThis as any).EdgeRuntime?.waitUntil?.(emailPromises); } catch {}
+      });
+    } catch (e) { console.error('Follow-up email failed:', e); }
 
     return new Response(JSON.stringify({ success: true, refundAmount, refundStatus, stripeRefundId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -33,16 +33,16 @@ serve(async (req) => {
       const { data: users, error } = await supabaseClient.auth.admin.listUsers();
       if (error) throw error;
       
-      emails = users.users.map((user: any) => user.email).filter((e: any): e is string => Boolean(e));
+      emails = users.users.map(user => user.email).filter(Boolean);
     } else if (userIds && userIds.length > 0) {
       // Get specific users by IDs
       const { data: users, error } = await supabaseClient.auth.admin.listUsers();
       if (error) throw error;
       
       emails = users.users
-        .filter((user: any) => userIds.includes(user.id))
-        .map((user: any) => user.email)
-        .filter((e: any): e is string => Boolean(e));
+        .filter(user => userIds.includes(user.id))
+        .map(user => user.email)
+        .filter(Boolean);
     }
 
     return new Response(
@@ -58,7 +58,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error getting user emails:', error);
     return new Response(
-      JSON.stringify({ error: (error as Error).message }),
+      JSON.stringify({ error: error.message }),
       { 
         status: 500,
         headers: { 
