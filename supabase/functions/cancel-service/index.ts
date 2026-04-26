@@ -88,42 +88,39 @@ serve(async (req) => {
       }
     }
 
-    // Cancel ticket
-    await admin.from('tickets').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', ticket.id);
-
-    // Send confirmation email (immediate)
-    try {
-      await admin.functions.invoke('send-notification-email', {
-        body: {
-          to: ticket.customer_email,
-          name: ticket.customer_name,
-          type: 'service_cancelled',
-          data: {
-            serviceName: ticket.services?.name || 'Service',
-            ticketNumber: ticket.ticket_number,
-            refundAmount,
-            refundStatus,
-            reason: reason || null,
-          },
+    // Cancel ticket and send confirmation email in parallel
+    const updateTicket = admin.from('tickets').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', ticket.id);
+    const sendConfirmation = admin.functions.invoke('send-notification-email', {
+      body: {
+        to: ticket.customer_email,
+        name: ticket.customer_name,
+        type: 'service_cancelled',
+        data: {
+          serviceName: ticket.services?.name || 'Service',
+          ticketNumber: ticket.ticket_number,
+          refundAmount,
+          refundStatus,
+          reason,
         },
-      });
-    } catch (e) { console.error('Cancellation email failed:', e); }
+      },
+    });
 
-    // Send follow-up thank-you / feedback email
-    try {
-      await admin.functions.invoke('send-notification-email', {
-        body: {
-          to: ticket.customer_email,
-          name: ticket.customer_name,
-          type: 'service_thankyou',
-          data: {
-            serviceName: ticket.services?.name || 'Service',
-            ticketNumber: ticket.ticket_number,
-            message: `We're sorry to see you cancel your ${ticket.services?.name || 'service'} booking. Your feedback "${reason}" helps us improve. We hope to serve you again soon. 🙏`,
-          },
+    // Fire-and-forget follow-up thank-you email (don't block response)
+    const followUp = admin.functions.invoke('send-notification-email', {
+      body: {
+        to: ticket.customer_email,
+        name: ticket.customer_name,
+        type: 'service_thankyou',
+        data: {
+          serviceName: ticket.services?.name || 'Service',
+          ticketNumber: ticket.ticket_number,
+          message: `We're sorry to see you cancel your ${ticket.services?.name || 'service'} booking. Your feedback "${reason}" helps us improve. We hope to serve you again soon. 🙏`,
         },
-      });
-    } catch (e) { console.error('Follow-up email failed:', e); }
+      },
+    });
+
+    await Promise.allSettled([updateTicket, sendConfirmation]);
+    followUp.catch((e) => console.error('Follow-up email failed:', e));
 
     return new Response(JSON.stringify({ success: true, refundAmount, refundStatus, stripeRefundId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

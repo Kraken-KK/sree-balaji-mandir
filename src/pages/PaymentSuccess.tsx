@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Download, Home, CreditCard } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
@@ -15,6 +16,44 @@ const PaymentSuccess = () => {
   const type = searchParams.get('type');
   const amount = searchParams.get('amount');
   const description = searchParams.get('description');
+
+  // Send receipt / invoice email automatically once
+  useEffect(() => {
+    if (!user?.email || !sessionId || !amount) return;
+    const sentKey = `receipt_sent_${sessionId}`;
+    if (localStorage.getItem(sentKey)) return;
+    localStorage.setItem(sentKey, '1');
+
+    const name = user.user_metadata?.full_name || user.email.split('@')[0];
+    const amt = Number(amount);
+    const desc = description ? decodeURIComponent(description) : 'Temple Service';
+
+    if (type === 'donation') {
+      supabase.functions.invoke('send-notification-email', {
+        body: { to: user.email, name, type: 'donation_receipt', data: { donationAmount: amt, purpose: desc } },
+      }).catch((e) => console.error('Donation receipt email failed:', e));
+      setTimeout(() => {
+        supabase.functions.invoke('send-notification-email', {
+          body: { to: user.email, name, type: 'donation_thankyou', data: { donationAmount: amt } },
+        }).catch((e) => console.error('Donation thankyou email failed:', e));
+      }, 2000);
+    } else {
+      supabase.functions.invoke('send-notification-email', {
+        body: {
+          to: user.email,
+          name,
+          type: 'service_booking',
+          data: {
+            serviceName: desc,
+            servicePrice: amt,
+            ticketNumber: sessionId.slice(-12).toUpperCase(),
+            serviceDate: new Date().toLocaleDateString('en-IN'),
+          },
+        },
+      }).catch((e) => console.error('Booking email failed:', e));
+    }
+  }, [user, sessionId, type, amount, description]);
+
 
   const generateInvoice = () => {
     const invoiceData = {
