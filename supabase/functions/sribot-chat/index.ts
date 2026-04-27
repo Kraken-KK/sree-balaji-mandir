@@ -22,18 +22,27 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const [eventsRes, servicesRes] = await Promise.all([
-      supabase.from('events').select('*').order('date', { ascending: true }).limit(10),
-      supabase.from('services').select('*').order('created_at', { ascending: false }).limit(10),
+    const [eventsRes, servicesRes, galleryRes] = await Promise.all([
+      supabase.from('events').select('*').order('date', { ascending: true }).limit(15),
+      supabase.from('services').select('*').order('created_at', { ascending: false }).limit(20),
+      supabase.from('gallery').select('title, category').limit(10),
     ]);
 
     const events = eventsRes.data || [];
     const services = servicesRes.data || [];
+    const gallery = galleryRes.data || [];
 
     const liveContext = `
-LIVE TEMPLE DATA:
-Events: ${events.map((e: any) => `${e.name} on ${e.date} at ${e.time} (${e.location})`).join('; ') || 'None scheduled'}
-Services: ${services.map((s: any) => `${s.name} - ₹${s.price}${s.description ? ` (${s.description})` : ''}`).join('; ') || 'None available'}
+LIVE TEMPLE DATA (use these specifics in answers):
+
+EVENTS (${events.length}):
+${events.map((e: any) => `• ${e.name} — ${e.date} at ${e.time}, ${e.location}${e.description ? ` — ${e.description}` : ''}`).join('\n') || '• None scheduled'}
+
+SERVICES (${services.length}):
+${services.map((s: any) => `• ${s.name} — ₹${s.price}${s.duration ? ` (${s.duration})` : ''}${s.description ? ` — ${s.description}` : ''}`).join('\n') || '• None available'}
+
+GALLERY HIGHLIGHTS:
+${gallery.map((g: any) => `• ${g.title}${g.category ? ` [${g.category}]` : ''}`).join('\n') || '• None'}
 `;
 
     const languageMap: Record<string, string> = {
@@ -44,18 +53,27 @@ Services: ${services.map((s: any) => `${s.name} - ₹${s.price}${s.description ?
       kn: "ಕನ್ನಡದಲ್ಲಿ ಉತ್ತರಿಸಿ",
     };
 
-    const systemPrompt = `You are Sribot, the AI assistant for Sree Balaji Mandir. You are knowledgeable, devotional, and helpful. Use 🙏 and other appropriate emojis.
+    const systemPrompt = `You are Sribot — the agentic AI concierge for Sree Balaji Mandir. You are knowledgeable, devotional, proactive, and action-oriented. Use 🙏 and tasteful emojis.
 
 ${languageMap[language] || languageMap.en}
 
 ${liveContext}
 
-Guidelines:
-- Provide specific costs, dates, and details from the live data above
-- Guide users to relevant pages: /events, /services, /donations, /gallery
-- Be concise but warm and devotional
-- Use markdown formatting: **bold**, *italic*, bullet lists, etc.
-- When listing services or events, format them clearly`;
+AGENTIC BEHAVIOR (very important):
+- Be PROACTIVE: when a user expresses intent (e.g. "I want to do an abhishekam", "I'd like to donate"), don't just describe — guide them with concrete next steps and a markdown link to the right page.
+- Always recommend the most relevant next action at the end of every reply, formatted as a markdown link:
+  • Booking a service → [Book this service →](/services)
+  • Registering for an event → [Register for the event →](/events)
+  • Donating → [Make a donation →](/donations)
+  • Viewing photos → [View gallery →](/gallery)
+  • Viewing past tickets → [Your tickets →](/history)
+  • Contacting temple → [Contact us →](/contact)
+- When asked about pricing, ALWAYS quote the exact ₹ amount from the live data.
+- When asked about an event, ALWAYS include date, time, location AND suggest related services if any exist.
+- If the user seems unsure, offer 2-3 clear options as a bullet list with deep links.
+- For multi-step tasks (e.g. "register me for Diwali and book an abhishekam"), break it into a numbered checklist with links per step.
+- Be concise (under ~120 words usually), warm, and devotional. Use **bold** for key facts.
+- NEVER invent prices, dates, or services not in the live data above.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
