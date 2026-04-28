@@ -357,7 +357,8 @@ export const AdminGalleryManager = () => {
               </div>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {galleryItems.length === 0 && (
