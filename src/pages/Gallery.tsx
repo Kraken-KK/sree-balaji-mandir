@@ -181,15 +181,43 @@ const Gallery = () => {
                   </div>
                 </div>
 
-                {/* Image */}
+                {/* Media */}
                 <div className="flex-1 flex items-center justify-center overflow-auto p-4">
-                  <img
-                    key={activeItem.id}
-                    src={activeItem.image_url}
-                    alt={activeItem.title}
-                    className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl transition-transform duration-300 animate-scale-in"
-                    style={{ transform: `scale(${zoom})` }}
-                  />
+                  {(() => {
+                    const media = detectMedia(activeItem.image_url);
+                    if (media.kind === 'youtube' || media.kind === 'gdrive') {
+                      return (
+                        <iframe
+                          key={activeItem.id}
+                          src={media.src}
+                          title={activeItem.title}
+                          className="w-full h-full max-w-5xl rounded-2xl shadow-2xl bg-black aspect-video"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                          referrerPolicy="strict-origin-when-cross-origin"
+                        />
+                      );
+                    }
+                    if (media.kind === 'video') {
+                      return (
+                        <video
+                          key={activeItem.id}
+                          src={media.src}
+                          controls
+                          className="max-w-full max-h-full rounded-2xl shadow-2xl bg-black"
+                        />
+                      );
+                    }
+                    return (
+                      <img
+                        key={activeItem.id}
+                        src={media.src}
+                        alt={activeItem.title}
+                        className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl transition-transform duration-300 animate-scale-in"
+                        style={{ transform: `scale(${zoom})` }}
+                      />
+                    );
+                  })()}
                 </div>
 
                 {/* Prev / Next */}
