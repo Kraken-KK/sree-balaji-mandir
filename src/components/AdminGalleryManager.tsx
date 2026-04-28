@@ -223,31 +223,47 @@ export const AdminGalleryManager = () => {
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
-              Upload Image
+              Add Media
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Upload New Image</DialogTitle>
+              <DialogTitle>Add to Gallery</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="file">Image File</Label>
-                <Input
-                  id="file"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  required
-                />
-              </div>
+              <Tabs value={mode} onValueChange={(v) => setMode(v as 'file' | 'url')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="file" className="gap-1.5"><Upload className="w-3.5 h-3.5" /> Upload</TabsTrigger>
+                  <TabsTrigger value="url" className="gap-1.5"><LinkIcon className="w-3.5 h-3.5" /> Link</TabsTrigger>
+                </TabsList>
+                <TabsContent value="file" className="space-y-2 pt-3">
+                  <Label htmlFor="file">Image File</Label>
+                  <Input id="file" type="file" accept="image/*" onChange={handleFileChange} />
+                </TabsContent>
+                <TabsContent value="url" className="space-y-2 pt-3">
+                  <Label htmlFor="mediaUrl">YouTube or Google Drive Link</Label>
+                  <Input
+                    id="mediaUrl"
+                    type="url"
+                    value={newItem.mediaUrl}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, mediaUrl: e.target.value }))}
+                    placeholder="https://youtube.com/watch?v=... or https://drive.google.com/file/d/..."
+                  />
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
+                    <span className="flex items-center gap-1"><Youtube className="w-3.5 h-3.5 text-red-500" /> YouTube</span>
+                    <span className="flex items-center gap-1"><FileVideo className="w-3.5 h-3.5 text-blue-500" /> Google Drive</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">For Drive links, set sharing to "Anyone with the link".</p>
+                </TabsContent>
+              </Tabs>
+
               <div>
                 <Label htmlFor="title">Title</Label>
                 <Input
                   id="title"
                   value={newItem.title}
                   onChange={(e) => setNewItem(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Enter image title"
+                  placeholder="Enter title"
                   required
                 />
               </div>
@@ -257,7 +273,7 @@ export const AdminGalleryManager = () => {
                   id="description"
                   value={newItem.description}
                   onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Enter image description (optional)"
+                  placeholder="Optional description"
                 />
               </div>
               <div>
@@ -266,15 +282,14 @@ export const AdminGalleryManager = () => {
                   value={newItem.category}
                   onValueChange={(value) => setNewItem(prev => ({ ...prev, category: value }))}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="general">General</SelectItem>
                     <SelectItem value="festivals">Festivals</SelectItem>
                     <SelectItem value="architecture">Architecture</SelectItem>
                     <SelectItem value="rituals">Rituals</SelectItem>
                     <SelectItem value="community">Community</SelectItem>
+                    <SelectItem value="videos">Videos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -285,20 +300,10 @@ export const AdminGalleryManager = () => {
                   checked={newItem.is_featured}
                   onChange={(e) => setNewItem(prev => ({ ...prev, is_featured: e.target.checked }))}
                 />
-                <Label htmlFor="featured">Featured Image</Label>
+                <Label htmlFor="featured">Featured</Label>
               </div>
               <Button type="submit" disabled={uploading} className="w-full">
-                {uploading ? (
-                  <>
-                    <Upload className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Image
-                  </>
-                )}
+                {uploading ? (<><Upload className="w-4 h-4 mr-2 animate-spin" /> Saving...</>) : (<><Plus className="w-4 h-4 mr-2" /> Add to Gallery</>)}
               </Button>
             </form>
           </DialogContent>
