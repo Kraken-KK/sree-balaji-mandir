@@ -311,14 +311,19 @@ export const AdminGalleryManager = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {galleryItems.map((item) => (
+        {galleryItems.map((item) => {
+          const media = detectMedia(item.image_url);
+          const thumb = media.thumbnail || item.image_url;
+          return (
           <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-all duration-300">
             <div className="relative">
-              <img
-                src={item.image_url}
-                alt={item.title}
-                className="w-full h-48 object-cover"
-              />
+              <img src={thumb} alt={item.title} className="w-full h-48 object-cover bg-muted" />
+              {media.kind !== 'image' && (
+                <Badge className="absolute top-2 right-2 bg-black/70 text-white border-0 capitalize">
+                  {media.kind === 'youtube' ? <Youtube className="w-3 h-3 mr-1" /> : <FileVideo className="w-3 h-3 mr-1" />}
+                  {media.kind}
+                </Badge>
+              )}
               {item.is_featured && (
                 <Badge className="absolute top-2 left-2 bg-yellow-500">
                   <Star className="w-3 h-3 mr-1" />
