@@ -34,12 +34,14 @@ export const AdminGalleryManager = () => {
   const [uploading, setUploading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  const [mode, setMode] = useState<'file' | 'url'>('file');
   const [newItem, setNewItem] = useState({
     title: '',
     description: '',
     category: 'general',
     is_featured: false,
-    file: null as File | null
+    file: null as File | null,
+    mediaUrl: '',
   });
 
   useEffect(() => {
