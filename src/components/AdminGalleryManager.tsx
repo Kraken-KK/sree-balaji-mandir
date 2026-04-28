@@ -11,7 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Upload, Plus, Trash2, Star, Image as ImageIcon } from 'lucide-react';
+import { Upload, Plus, Trash2, Star, Image as ImageIcon, Link as LinkIcon, Youtube, FileVideo } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { detectMedia } from '@/lib/media';
 
 interface GalleryItem {
   id: string;
