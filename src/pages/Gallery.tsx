@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Star, Image as ImageIcon, ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { Star, Image as ImageIcon, ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut, Play } from 'lucide-react';
+import { detectMedia, isEmbedMedia } from '@/lib/media';
 
 interface GalleryItem {
   id: string; title: string; description: string | null; image_url: string;
