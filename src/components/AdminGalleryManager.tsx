@@ -11,7 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Upload, Plus, Trash2, Star, Image as ImageIcon } from 'lucide-react';
+import { Upload, Plus, Trash2, Star, Image as ImageIcon, Link as LinkIcon, Youtube, FileVideo } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { detectMedia } from '@/lib/media';
 
 interface GalleryItem {
   id: string;
@@ -32,12 +34,14 @@ export const AdminGalleryManager = () => {
   const [uploading, setUploading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  const [mode, setMode] = useState<'file' | 'url'>('file');
   const [newItem, setNewItem] = useState({
     title: '',
     description: '',
     category: 'general',
     is_featured: false,
-    file: null as File | null
+    file: null as File | null,
+    mediaUrl: '',
   });
 
   useEffect(() => {
@@ -100,21 +104,30 @@ export const AdminGalleryManager = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newItem.file || !newItem.title.trim()) {
-      toast({
-        title: "Missing information",
-        description: "Please provide both title and image file.",
-        variant: "destructive",
-      });
+    if (!newItem.title.trim()) {
+      toast({ title: "Missing title", description: "Please provide a title.", variant: "destructive" });
+      return;
+    }
+    if (mode === 'file' && !newItem.file) {
+      toast({ title: "Missing file", description: "Please pick an image to upload.", variant: "destructive" });
+      return;
+    }
+    if (mode === 'url' && !newItem.mediaUrl.trim()) {
+      toast({ title: "Missing link", description: "Paste a YouTube or Google Drive link.", variant: "destructive" });
       return;
     }
 
     setUploading(true);
     try {
-      // Upload image to storage
-      const imageUrl = await uploadImage(newItem.file);
+      let imageUrl: string;
+      if (mode === 'file' && newItem.file) {
+        imageUrl = await uploadImage(newItem.file);
+      } else {
+        // Validate the URL is a recognised embed/image
+        const detected = detectMedia(newItem.mediaUrl.trim());
+        imageUrl = detected.original;
+      }
 
-      // Save metadata to database
       const { error } = await supabase
         .from('gallery')
         .insert({
@@ -128,27 +141,21 @@ export const AdminGalleryManager = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Image uploaded successfully!",
-      });
+      toast({ title: "Success", description: "Added to gallery!" });
 
       setNewItem({
         title: '',
         description: '',
         category: 'general',
         is_featured: false,
-        file: null
+        file: null,
+        mediaUrl: '',
       });
       setIsDialogOpen(false);
       fetchGalleryItems();
     } catch (error) {
-      console.error('Error uploading image:', error);
-      toast({
-        title: "Error",
-        description: "Failed to upload image. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Error adding gallery item:', error);
+      toast({ title: "Error", description: "Failed to add item. Please try again.", variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -170,14 +177,16 @@ export const AdminGalleryManager = () => {
 
   const deleteItem = async (id: string, imageUrl: string) => {
     try {
-      // Extract file path from URL
-      const url = new URL(imageUrl);
-      const filePath = url.pathname.split('/storage/v1/object/public/gallery-images/')[1];
-
-      // Delete from storage
-      await supabase.storage
-        .from('gallery-images')
-        .remove([filePath]);
+      // Only attempt storage delete for our own bucket URLs
+      if (imageUrl.includes('/storage/v1/object/public/gallery-images/')) {
+        try {
+          const url = new URL(imageUrl);
+          const filePath = url.pathname.split('/storage/v1/object/public/gallery-images/')[1];
+          if (filePath) await supabase.storage.from('gallery-images').remove([filePath]);
+        } catch (e) {
+          console.warn('Storage cleanup skipped:', e);
+        }
+      }
 
       // Delete from database
       const { error } = await supabase
@@ -214,31 +223,47 @@ export const AdminGalleryManager = () => {
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
-              Upload Image
+              Add Media
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Upload New Image</DialogTitle>
+              <DialogTitle>Add to Gallery</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="file">Image File</Label>
-                <Input
-                  id="file"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  required
-                />
-              </div>
+              <Tabs value={mode} onValueChange={(v) => setMode(v as 'file' | 'url')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="file" className="gap-1.5"><Upload className="w-3.5 h-3.5" /> Upload</TabsTrigger>
+                  <TabsTrigger value="url" className="gap-1.5"><LinkIcon className="w-3.5 h-3.5" /> Link</TabsTrigger>
+                </TabsList>
+                <TabsContent value="file" className="space-y-2 pt-3">
+                  <Label htmlFor="file">Image File</Label>
+                  <Input id="file" type="file" accept="image/*" onChange={handleFileChange} />
+                </TabsContent>
+                <TabsContent value="url" className="space-y-2 pt-3">
+                  <Label htmlFor="mediaUrl">YouTube or Google Drive Link</Label>
+                  <Input
+                    id="mediaUrl"
+                    type="url"
+                    value={newItem.mediaUrl}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, mediaUrl: e.target.value }))}
+                    placeholder="https://youtube.com/watch?v=... or https://drive.google.com/file/d/..."
+                  />
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
+                    <span className="flex items-center gap-1"><Youtube className="w-3.5 h-3.5 text-red-500" /> YouTube</span>
+                    <span className="flex items-center gap-1"><FileVideo className="w-3.5 h-3.5 text-blue-500" /> Google Drive</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">For Drive links, set sharing to "Anyone with the link".</p>
+                </TabsContent>
+              </Tabs>
+
               <div>
                 <Label htmlFor="title">Title</Label>
                 <Input
                   id="title"
                   value={newItem.title}
                   onChange={(e) => setNewItem(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Enter image title"
+                  placeholder="Enter title"
                   required
                 />
               </div>
@@ -248,7 +273,7 @@ export const AdminGalleryManager = () => {
                   id="description"
                   value={newItem.description}
                   onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Enter image description (optional)"
+                  placeholder="Optional description"
                 />
               </div>
               <div>
@@ -257,15 +282,14 @@ export const AdminGalleryManager = () => {
                   value={newItem.category}
                   onValueChange={(value) => setNewItem(prev => ({ ...prev, category: value }))}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="general">General</SelectItem>
                     <SelectItem value="festivals">Festivals</SelectItem>
                     <SelectItem value="architecture">Architecture</SelectItem>
                     <SelectItem value="rituals">Rituals</SelectItem>
                     <SelectItem value="community">Community</SelectItem>
+                    <SelectItem value="videos">Videos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -276,20 +300,10 @@ export const AdminGalleryManager = () => {
                   checked={newItem.is_featured}
                   onChange={(e) => setNewItem(prev => ({ ...prev, is_featured: e.target.checked }))}
                 />
-                <Label htmlFor="featured">Featured Image</Label>
+                <Label htmlFor="featured">Featured</Label>
               </div>
               <Button type="submit" disabled={uploading} className="w-full">
-                {uploading ? (
-                  <>
-                    <Upload className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Image
-                  </>
-                )}
+                {uploading ? (<><Upload className="w-4 h-4 mr-2 animate-spin" /> Saving...</>) : (<><Plus className="w-4 h-4 mr-2" /> Add to Gallery</>)}
               </Button>
             </form>
           </DialogContent>
@@ -297,14 +311,19 @@ export const AdminGalleryManager = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {galleryItems.map((item) => (
+        {galleryItems.map((item) => {
+          const media = detectMedia(item.image_url);
+          const thumb = media.thumbnail || item.image_url;
+          return (
           <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-all duration-300">
             <div className="relative">
-              <img
-                src={item.image_url}
-                alt={item.title}
-                className="w-full h-48 object-cover"
-              />
+              <img src={thumb} alt={item.title} className="w-full h-48 object-cover bg-muted" />
+              {media.kind !== 'image' && (
+                <Badge className="absolute top-2 right-2 bg-black/70 text-white border-0 capitalize">
+                  {media.kind === 'youtube' ? <Youtube className="w-3 h-3 mr-1" /> : <FileVideo className="w-3 h-3 mr-1" />}
+                  {media.kind}
+                </Badge>
+              )}
               {item.is_featured && (
                 <Badge className="absolute top-2 left-2 bg-yellow-500">
                   <Star className="w-3 h-3 mr-1" />
@@ -338,7 +357,8 @@ export const AdminGalleryManager = () => {
               </div>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {galleryItems.length === 0 && (
