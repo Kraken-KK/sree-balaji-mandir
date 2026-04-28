@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import TicketGenerator from './TicketGenerator';
 import QRCode from 'qrcode';
-import { Receipt, Ticket, Heart, Download, Calendar, DollarSign } from 'lucide-react';
+import { Receipt, Ticket, Heart, Download, Calendar, DollarSign, Printer } from 'lucide-react';
 
 const UserHistorySection: React.FC = () => {
   const { user } = useAuth();
