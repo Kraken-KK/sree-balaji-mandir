@@ -101,7 +101,10 @@ const Gallery = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">{[1,2,3,4,5,6].map(i => <div key={i} className="glass-card h-72 loading-shimmer rounded-2xl" />)}</div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredItems.map((item, i) => (
+            {filteredItems.map((item, i) => {
+              const media = detectMedia(item.image_url);
+              const thumb = media.thumbnail || item.image_url;
+              return (
               <div
                 key={item.id}
                 onClick={() => { setOpenIndex(i); setZoom(1); }}
@@ -110,11 +113,25 @@ const Gallery = () => {
               >
                 <div className="relative">
                   <img
-                    src={item.image_url}
+                    src={thumb}
                     alt={item.title}
                     loading="lazy"
-                    className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/placeholder.svg'; }}
+                    className="w-full h-64 object-cover bg-muted group-hover:scale-110 transition-transform duration-700"
                   />
+                  {isEmbedMedia(media.kind) && (
+                    <>
+                      <div className="absolute inset-0 bg-black/30" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-14 h-14 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                          <Play className="w-6 h-6 text-vermillion fill-current ml-1" />
+                        </div>
+                      </div>
+                      <Badge className="absolute top-3 right-3 bg-black/70 text-white border-0 capitalize">
+                        {media.kind === 'youtube' ? 'YouTube' : 'Drive'}
+                      </Badge>
+                    </>
+                  )}
                   {item.is_featured && (
                     <Badge className="absolute top-3 left-3 gradient-saffron text-white border-0 shadow-lg">
                       <Star className="w-3 h-3 mr-1 fill-current" /> Featured
@@ -125,12 +142,10 @@ const Gallery = () => {
                     <h3 className="font-display font-semibold text-lg drop-shadow-lg">{item.title}</h3>
                     {item.description && <p className="text-sm text-white/90 mt-1 line-clamp-2 drop-shadow">{item.description}</p>}
                   </div>
-                  <div className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-50 group-hover:scale-100">
-                    <ZoomIn className="w-4 h-4 text-white" />
-                  </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
