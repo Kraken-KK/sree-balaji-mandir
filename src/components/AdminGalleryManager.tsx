@@ -177,14 +177,16 @@ export const AdminGalleryManager = () => {
 
   const deleteItem = async (id: string, imageUrl: string) => {
     try {
-      // Extract file path from URL
-      const url = new URL(imageUrl);
-      const filePath = url.pathname.split('/storage/v1/object/public/gallery-images/')[1];
-
-      // Delete from storage
-      await supabase.storage
-        .from('gallery-images')
-        .remove([filePath]);
+      // Only attempt storage delete for our own bucket URLs
+      if (imageUrl.includes('/storage/v1/object/public/gallery-images/')) {
+        try {
+          const url = new URL(imageUrl);
+          const filePath = url.pathname.split('/storage/v1/object/public/gallery-images/')[1];
+          if (filePath) await supabase.storage.from('gallery-images').remove([filePath]);
+        } catch (e) {
+          console.warn('Storage cleanup skipped:', e);
+        }
+      }
 
       // Delete from database
       const { error } = await supabase
