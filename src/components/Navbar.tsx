@@ -76,12 +76,14 @@ const Navbar = () => {
       <div className={`${scrolled ? 'px-4' : 'container mx-auto px-4'}`}>
         <div className={`flex items-center justify-between ${scrolled ? 'h-14' : 'h-16'} transition-all duration-500`}>
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2.5 group">
-            <div className={`rounded-xl gradient-devotional flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-300 ${scrolled ? 'h-8 w-8' : 'h-9 w-9'}`}>
-              <span className="text-white font-bold text-base">ॐ</span>
-            </div>
-            <span className={`font-display font-semibold text-foreground group-hover:text-primary transition-all duration-300 ${scrolled ? 'text-sm' : 'text-base lg:text-lg'}`}>
-              Sri Balaji Temple
+          <Link to="/" className="flex items-center group">
+            <span
+              className={`bg-clip-text text-transparent bg-gradient-to-r from-saffron via-vermillion to-gold group-hover:from-vermillion group-hover:to-saffron transition-all duration-500 ${
+                scrolled ? 'text-base lg:text-xl' : 'text-lg lg:text-2xl'
+              }`}
+              style={{ fontFamily: "'Cinzel Decorative', 'Playfair Display', serif", fontWeight: 700, letterSpacing: '0.06em' }}
+            >
+              Sree Balaji Mandir
             </span>
           </Link>
 
