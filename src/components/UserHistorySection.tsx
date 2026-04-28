@@ -466,18 +466,25 @@ const UserHistorySection: React.FC = () => {
                         service_name: ticket.services?.name || 'Service'
                       }}
                     />
-                    {relatedPayment && (
-                      <div className="text-center">
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <Button
+                        onClick={() => printTicket(ticket, relatedPayment)}
+                        className="hover-scale bg-gradient-to-r from-purple-700 via-pink-600 to-amber-500 text-white border-0"
+                      >
+                        <Printer className="w-4 h-4 mr-2" />
+                        Print Divine Ticket
+                      </Button>
+                      {relatedPayment && (
                         <Button
                           variant="outline"
                           onClick={() => downloadInvoice(relatedPayment, ticket)}
                           className="hover-scale"
                         >
                           <Download className="w-4 h-4 mr-2" />
-                          Download Ticket Invoice
+                          Invoice
                         </Button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 );
               })
