@@ -104,21 +104,30 @@ export const AdminGalleryManager = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newItem.file || !newItem.title.trim()) {
-      toast({
-        title: "Missing information",
-        description: "Please provide both title and image file.",
-        variant: "destructive",
-      });
+    if (!newItem.title.trim()) {
+      toast({ title: "Missing title", description: "Please provide a title.", variant: "destructive" });
+      return;
+    }
+    if (mode === 'file' && !newItem.file) {
+      toast({ title: "Missing file", description: "Please pick an image to upload.", variant: "destructive" });
+      return;
+    }
+    if (mode === 'url' && !newItem.mediaUrl.trim()) {
+      toast({ title: "Missing link", description: "Paste a YouTube or Google Drive link.", variant: "destructive" });
       return;
     }
 
     setUploading(true);
     try {
-      // Upload image to storage
-      const imageUrl = await uploadImage(newItem.file);
+      let imageUrl: string;
+      if (mode === 'file' && newItem.file) {
+        imageUrl = await uploadImage(newItem.file);
+      } else {
+        // Validate the URL is a recognised embed/image
+        const detected = detectMedia(newItem.mediaUrl.trim());
+        imageUrl = detected.original;
+      }
 
-      // Save metadata to database
       const { error } = await supabase
         .from('gallery')
         .insert({
@@ -132,27 +141,21 @@ export const AdminGalleryManager = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Image uploaded successfully!",
-      });
+      toast({ title: "Success", description: "Added to gallery!" });
 
       setNewItem({
         title: '',
         description: '',
         category: 'general',
         is_featured: false,
-        file: null
+        file: null,
+        mediaUrl: '',
       });
       setIsDialogOpen(false);
       fetchGalleryItems();
     } catch (error) {
-      console.error('Error uploading image:', error);
-      toast({
-        title: "Error",
-        description: "Failed to upload image. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Error adding gallery item:', error);
+      toast({ title: "Error", description: "Failed to add item. Please try again.", variant: "destructive" });
     } finally {
       setUploading(false);
     }
