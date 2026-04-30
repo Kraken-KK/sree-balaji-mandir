@@ -26,12 +26,15 @@ const queryClient = new QueryClient();
 
 function App() {
   const [showSplash, setShowSplash] = useState(() => {
-    return !sessionStorage.getItem('splash-shown');
+    const lastShown = localStorage.getItem('splash-last-shown');
+    if (!lastShown) return true;
+    const today = new Date().toDateString();
+    return lastShown !== today;
   });
 
   const handleSplashComplete = useCallback(() => {
     setShowSplash(false);
-    sessionStorage.setItem('splash-shown', 'true');
+    localStorage.setItem('splash-last-shown', new Date().toDateString());
   }, []);
 
   return (
